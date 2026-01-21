@@ -1,0 +1,62 @@
+{
+    "expo": {
+        "name": "DigiSecond",
+        "slug": "digisecond",
+        "version": "0.1.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "scheme": "digisecond",
+        "userInterfaceStyle": "automatic",
+        "splash": {
+            "image": "./assets/splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#22c55e"
+        },
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.digisecond.app"
+        },
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/adaptive-icon.png",
+                "backgroundColor": "#22c55e"
+            },
+            "package": "com.digisecond.app"
+        },
+        "web": {
+            "bundler": "metro",
+            "output": "static",
+            "favicon": "./assets/favicon.png"
+        },
+        "plugins": [
+            "expo-router",
+            "expo-secure-store",
+            [
+                "expo-camera",
+                {
+                    "cameraPermission": "Allow DigiSecond to access your camera for taking product photos."
+                }
+            ],
+            [
+                "expo-image-picker",
+                {
+                    "photosPermission": "Allow DigiSecond to access your photos for listing images."
+                }
+            ],
+            [
+                "expo-local-authentication",
+                {
+                    "faceIDPermission": "Allow DigiSecond to use Face ID for quick login."
+                }
+            ]
+        ],
+        "experiments": {
+            "typedRoutes": true
+        },
+        "extra": {
+            "eas": {
+                "projectId": "your-eas-project-id"
+            }
+        }
+    }
+}

@@ -1,0 +1,372 @@
+// This is your Prisma schema file
+// Learn more about it: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================
+// User & Authentication
+// ===========================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  phone         String?
+  name          String
+  avatar        String?
+  passwordHash  String?
+  role          UserRole  @default(BUYER)
+  rating        Float     @default(0)
+  ratingCount   Int       @default(0)
+  verified      Boolean   @default(false)
+  suspended     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  listings      Listing[]
+  purchases     Transaction[] @relation("Buyer")
+  sales         Transaction[] @relation("Seller")
+  bids          Bid[]
+  sentMessages  Message[]     @relation("Sender")
+  reviewsGiven  Review[]      @relation("Reviewer")
+  reviewsReceived Review[]    @relation("Reviewed")
+  disputes      Dispute[]     @relation("Initiator")
+  accounts      Account[]
+  sessions      Session[]
+
+  @@index([email])
+  @@index([role])
+}
+
+enum UserRole {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+// NextAuth.js models
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ===========================================
+// Categories
+// ===========================================
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  icon        String?
+  parentId    String?
+  createdAt   DateTime  @default(now())
+
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  listings    Listing[]
+
+  @@index([parentId])
+  @@index([slug])
+}
+
+// ===========================================
+// Listings
+// ===========================================
+
+model Listing {
+  id          String        @id @default(uuid())
+  sellerId    String
+  title       String
+  description String        @db.Text
+  price       Int
+  categoryId  String
+  type        ListingType   @default(FIXED)
+  status      ListingStatus @default(DRAFT)
+  photos      String[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Auction fields (only used when type = AUCTION)
+  startingBid   Int?
+  currentBid    Int?
+  reservePrice  Int?
+  bidIncrement  Int?          @default(5000)
+  buyNowPrice   Int?
+  endsAt        DateTime?
+  auctionStatus AuctionStatus?
+
+  // Relations
+  seller      User          @relation(fields: [sellerId], references: [id])
+  category    Category      @relation(fields: [categoryId], references: [id])
+  bids        Bid[]
+  transaction Transaction?
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum ListingType {
+  FIXED
+  AUCTION
+}
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
+enum AuctionStatus {
+  INACTIVE
+  ACTIVE
+  ENDED
+}
+
+// ===========================================
+// Bids (for auctions)
+// ===========================================
+
+model Bid {
+  id        String   @id @default(uuid())
+  listingId String
+  bidderId  String
+  amount    Int
+  isAutoBid Boolean  @default(false)
+  maxAutoBid Int?
+  createdAt DateTime @default(now())
+
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  bidder    User     @relation(fields: [bidderId], references: [id])
+
+  @@index([listingId])
+  @@index([bidderId])
+  @@index([createdAt(sort: Desc)])
+}
+
+// ===========================================
+// Transactions
+// ===========================================
+
+model Transaction {
+  id                   String            @id @default(uuid())
+  listingId            String            @unique
+  buyerId              String
+  sellerId             String
+  amount               Int
+  platformFee          Int
+  status               TransactionStatus @default(PENDING_PAYMENT)
+  verificationDeadline DateTime?
+  transferredAt        DateTime?
+  transferProof        String?
+  completedAt          DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  // Relations
+  listing   Listing   @relation(fields: [listingId], references: [id])
+  buyer     User      @relation("Buyer", fields: [buyerId], references: [id])
+  seller    User      @relation("Seller", fields: [sellerId], references: [id])
+  payments  Payment[]
+  messages  Message[]
+  dispute   Dispute?
+  reviews   Review[]
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum TransactionStatus {
+  PENDING_PAYMENT
+  PAID
+  ITEM_TRANSFERRED
+  VERIFIED
+  COMPLETED
+  DISPUTED
+  REFUNDED
+  CANCELLED
+}
+
+// ===========================================
+// Payments
+// ===========================================
+
+model Payment {
+  id            String        @id @default(uuid())
+  transactionId String
+  xenditId      String        @unique
+  method        PaymentMethod
+  amount        Int
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+  expiredAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+
+  @@index([transactionId])
+  @@index([xenditId])
+  @@index([status])
+}
+
+enum PaymentMethod {
+  VA
+  EWALLET
+  QRIS
+  CARD
+  RETAIL
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  REFUNDED
+}
+
+// ===========================================
+// Disputes
+// ===========================================
+
+model Dispute {
+  id            String           @id @default(uuid())
+  transactionId String           @unique
+  initiatorId   String
+  category      DisputeCategory
+  description   String           @db.Text
+  status        DisputeStatus    @default(OPEN)
+  resolution    DisputeResolution?
+  resolvedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  initiator   User        @relation("Initiator", fields: [initiatorId], references: [id])
+  evidence    Evidence[]
+
+  @@index([transactionId])
+  @@index([initiatorId])
+  @@index([status])
+}
+
+enum DisputeCategory {
+  NOT_AS_DESCRIBED
+  ACCESS_ISSUE
+  FRAUD
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+}
+
+enum DisputeResolution {
+  FULL_REFUND
+  PARTIAL_REFUND
+  NO_REFUND
+}
+
+model Evidence {
+  id        String   @id @default(uuid())
+  disputeId String
+  url       String
+  type      String   // image, video, document
+  createdAt DateTime @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id])
+
+  @@index([disputeId])
+}
+
+// ===========================================
+// Messages
+// ===========================================
+
+model Message {
+  id            String   @id @default(uuid())
+  transactionId String
+  senderId      String
+  content       String   @db.Text
+  attachment    String?
+  read          Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  sender      User        @relation("Sender", fields: [senderId], references: [id])
+
+  @@index([transactionId])
+  @@index([senderId])
+  @@index([createdAt(sort: Desc)])
+}
+
+// ===========================================
+// Reviews
+// ===========================================
+
+model Review {
+  id            String   @id @default(uuid())
+  transactionId String
+  reviewerId    String
+  reviewedId    String
+  rating        Int      // 1-5
+  comment       String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  reviewer    User        @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewed    User        @relation("Reviewed", fields: [reviewedId], references: [id])
+
+  @@unique([transactionId, reviewerId])
+  @@index([reviewerId])
+  @@index([reviewedId])
+}

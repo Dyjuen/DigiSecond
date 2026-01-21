@@ -1,0 +1,41 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Local env files
+.env
+.env.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+
+# iOS
+ios/Pods/
+ios/.xcode.env.local
+
+# Android
+android/.gradle/
+android/app/build/
+android/app/release/

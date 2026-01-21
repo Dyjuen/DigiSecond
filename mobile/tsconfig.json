@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "paths": {
+            "~/*": [
+                "./src/*"
+            ],
+            "@shared/*": [
+                "../src/lib/*"
+            ]
+        },
+        "baseUrl": "."
+    },
+    "extends": "expo/tsconfig.base.json"
+}
