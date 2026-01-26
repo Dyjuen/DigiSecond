@@ -1,15 +1,21 @@
 {
-    "compilerOptions": {
-        "strict": true,
-        "paths": {
-            "~/*": [
-                "./src/*"
-            ],
-            "@shared/*": [
-                "../src/lib/*"
-            ]
-        },
-        "baseUrl": "."
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "~/*": [
+        "./src/*"
+      ],
+      "@shared/*": [
+        "../src/lib/*"
+      ]
     },
-    "extends": "expo/tsconfig.base.json"
+    "baseUrl": "."
+  },
+  "extends": "expo/tsconfig.base.json",
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }
