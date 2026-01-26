@@ -11,38 +11,44 @@ datasource db {
 }
 
 // ===========================================
-// User & Authentication
+// MASTER TABLES (m_) - User & Authentication
 // ===========================================
 
+/// User: Master table untuk semua pengguna platform
+/// Menyimpan data profil, autentikasi, dan status akun
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  phone         String?
-  name          String
-  avatar        String?
-  passwordHash  String?
-  role          UserRole  @default(BUYER)
-  rating        Float     @default(0)
-  ratingCount   Int       @default(0)
-  verified      Boolean   @default(false)
-  suspended     Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  user_id        String    @id @default(uuid())
+  email          String    @unique
+  phone          String?
+  name           String
+  avatar_url     String?
+  password_hash  String?
+  role           UserRole  @default(BUYER)
+  rating         Float     @default(0)
+  rating_count   Int       @default(0)
+  is_verified    Boolean   @default(false)
+  is_suspended   Boolean   @default(false)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
 
   // Relations
-  listings      Listing[]
-  purchases     Transaction[] @relation("Buyer")
-  sales         Transaction[] @relation("Seller")
-  bids          Bid[]
-  sentMessages  Message[]     @relation("Sender")
-  reviewsGiven  Review[]      @relation("Reviewer")
-  reviewsReceived Review[]    @relation("Reviewed")
-  disputes      Dispute[]     @relation("Initiator")
-  accounts      Account[]
-  sessions      Session[]
+  listings           Listing[]
+  purchases          Transaction[] @relation("Buyer")
+  sales              Transaction[] @relation("Seller")
+  bids               Bid[]
+  sent_messages      Message[]     @relation("Sender")
+  reviews_given      Review[]      @relation("Reviewer")
+  reviews_received   Review[]      @relation("Reviewed")
+  disputes_initiated Dispute[]     @relation("Initiator")
+  accounts           Account[]
+  sessions           Session[]
+  bank_accounts      BankAccount[]
+  payouts            Payout[]
+  notifications      Notification[]
 
   @@index([email])
   @@index([role])
+  @@map("m_users")
 }
 
 enum UserRole {
@@ -51,103 +57,142 @@ enum UserRole {
   ADMIN
 }
 
-// NextAuth.js models
+/// Account: OAuth provider accounts untuk NextAuth.js
+/// Menyimpan token dari Google, Facebook, dll
 model Account {
-  id                String  @id @default(uuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  account_id          String  @id @default(uuid())
+  user_id             String
+  type                String
+  provider            String
+  provider_account_id String
+  refresh_token       String? @db.Text
+  access_token        String? @db.Text
+  expires_at          Int?
+  token_type          String?
+  scope               String?
+  id_token            String? @db.Text
+  session_state       String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
-  @@index([userId])
+  @@unique([provider, provider_account_id])
+  @@index([user_id])
+  @@map("m_accounts")
 }
 
+/// Session: Active user sessions untuk NextAuth.js
+/// Auto-managed, expired sessions harus di-cleanup periodic
 model Session {
-  id           String   @id @default(uuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
+  session_id    String   @id @default(uuid())
+  session_token String   @unique
+  user_id       String
+  expires_at    DateTime
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([user_id])
+  @@map("m_sessions")
 }
 
+/// VerificationToken: One-time verification codes untuk email/phone
+/// Ephemeral - 10 minute expiry, deleted after use
 model VerificationToken {
   identifier String
   token      String   @unique
-  expires    DateTime
+  expires_at DateTime
 
   @@unique([identifier, token])
+  @@map("m_verification_tokens")
 }
 
 // ===========================================
-// Categories
+// MASTER TABLES (m_) - Categories
 // ===========================================
 
+/// Category: Hierarchical product category taxonomy
+/// Self-referential untuk subcategories (e.g., Mobile Legends > Accounts, Diamonds)
 model Category {
-  id          String    @id @default(uuid())
+  category_id String    @id @default(uuid())
   name        String    @unique
   slug        String    @unique
-  icon        String?
-  parentId    String?
-  createdAt   DateTime  @default(now())
+  icon_url    String?
+  parent_id   String?
+  created_at  DateTime  @default(now())
 
-  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryHierarchy")
-  listings    Listing[]
+  parent   Category?  @relation("CategoryHierarchy", fields: [parent_id], references: [category_id])
+  children Category[] @relation("CategoryHierarchy")
+  listings Listing[]
 
-  @@index([parentId])
+  @@index([parent_id])
   @@index([slug])
+  @@map("m_categories")
 }
 
 // ===========================================
-// Listings
+// MASTER TABLES (m_) - Bank Accounts
 // ===========================================
 
-model Listing {
-  id          String        @id @default(uuid())
-  sellerId    String
-  title       String
-  description String        @db.Text
-  price       Int
-  categoryId  String
-  type        ListingType   @default(FIXED)
-  status      ListingStatus @default(DRAFT)
-  photos      String[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+/// BankAccount: Seller bank account information for payouts
+/// Users can have multiple bank accounts, one set as default
+model BankAccount {
+  bank_account_id     String   @id @default(uuid())
+  user_id             String
+  bank_code           String   // e.g., BCA, BNI, MANDIRI
+  bank_name           String
+  account_number      String
+  account_holder_name String
+  is_default          Boolean  @default(false)
+  is_verified         Boolean  @default(false)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
 
-  // Auction fields (only used when type = AUCTION)
-  startingBid   Int?
-  currentBid    Int?
-  reservePrice  Int?
-  bidIncrement  Int?          @default(5000)
-  buyNowPrice   Int?
-  endsAt        DateTime?
-  auctionStatus AuctionStatus?
+  user User @relation(fields: [user_id], references: [user_id])
+
+  @@index([user_id])
+  @@map("m_bank_accounts")
+}
+
+// ===========================================
+// TRANSACTION TABLES (t_) - Listings
+// ===========================================
+
+/// Listing: Digital items for sale
+/// Core product entity dengan support untuk fixed price dan auction
+model Listing {
+  listing_id    String        @id @default(uuid())
+  seller_id     String
+  title         String
+  description   String        @db.Text
+  price         Int           // Price in IDR (min 1000)
+  category_id   String
+  listing_type  ListingType   @default(FIXED)
+  status        ListingStatus @default(DRAFT)
+  photo_urls    String[]      // Max 5 photos
+  view_count    Int           @default(0)
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+
+  // Auction fields (only used when listing_type = AUCTION)
+  starting_bid    Int?
+  current_bid     Int?
+  reserve_price   Int?          // Hidden minimum price
+  bid_increment   Int?          @default(5000)
+  buy_now_price   Int?
+  auction_ends_at DateTime?
+  auction_status  AuctionStatus?
 
   // Relations
-  seller      User          @relation(fields: [sellerId], references: [id])
-  category    Category      @relation(fields: [categoryId], references: [id])
+  seller      User          @relation(fields: [seller_id], references: [user_id])
+  category    Category      @relation(fields: [category_id], references: [category_id])
   bids        Bid[]
   transaction Transaction?
 
-  @@index([sellerId])
-  @@index([categoryId])
+  @@index([seller_id])
+  @@index([category_id])
   @@index([status])
-  @@index([type])
-  @@index([createdAt(sort: Desc)])
+  @@index([listing_type])
+  @@index([created_at(sort: Desc)])
+  @@map("t_listings")
 }
 
 enum ListingType {
@@ -169,58 +214,66 @@ enum AuctionStatus {
 }
 
 // ===========================================
-// Bids (for auctions)
+// TRANSACTION TABLES (t_) - Bids (Auctions)
 // ===========================================
 
+/// Bid: Auction bids - immutable append-only table
+/// Tracks all bids including auto-bids
 model Bid {
-  id        String   @id @default(uuid())
-  listingId String
-  bidderId  String
-  amount    Int
-  isAutoBid Boolean  @default(false)
-  maxAutoBid Int?
-  createdAt DateTime @default(now())
+  bid_id              String   @id @default(uuid())
+  listing_id          String
+  bidder_id           String
+  bid_amount          Int      // Bid amount in IDR
+  is_auto_bid         Boolean  @default(false)
+  max_auto_bid_amount Int?
+  created_at          DateTime @default(now())
 
-  listing   Listing  @relation(fields: [listingId], references: [id])
-  bidder    User     @relation(fields: [bidderId], references: [id])
+  listing Listing @relation(fields: [listing_id], references: [listing_id])
+  bidder  User    @relation(fields: [bidder_id], references: [user_id])
 
-  @@index([listingId])
-  @@index([bidderId])
-  @@index([createdAt(sort: Desc)])
+  @@index([listing_id])
+  @@index([bidder_id])
+  @@index([created_at(sort: Desc)])
+  @@map("t_bids")
 }
 
 // ===========================================
-// Transactions
+// TRANSACTION TABLES (t_) - Transactions & Payments
 // ===========================================
 
+/// Transaction: Core purchase/sale records
+/// Central entity yang menghubungkan buyer, seller, listing, payment
 model Transaction {
-  id                   String            @id @default(uuid())
-  listingId            String            @unique
-  buyerId              String
-  sellerId             String
-  amount               Int
-  platformFee          Int
+  transaction_id       String            @id @default(uuid())
+  listing_id           String            @unique
+  buyer_id             String
+  seller_id            String
+  transaction_amount   Int               // Final price in IDR
+  platform_fee_amount  Int               // Platform cut (5% default)
+  seller_payout_amount Int               // Amount seller receives
   status               TransactionStatus @default(PENDING_PAYMENT)
-  verificationDeadline DateTime?
-  transferredAt        DateTime?
-  transferProof        String?
-  completedAt          DateTime?
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+  verification_deadline DateTime?        // 24hr auto-release
+  item_transferred_at  DateTime?
+  transfer_proof_url   String?
+  completed_at         DateTime?
+  created_at           DateTime          @default(now())
+  updated_at           DateTime          @updatedAt
 
   // Relations
-  listing   Listing   @relation(fields: [listingId], references: [id])
-  buyer     User      @relation("Buyer", fields: [buyerId], references: [id])
-  seller    User      @relation("Seller", fields: [sellerId], references: [id])
-  payments  Payment[]
-  messages  Message[]
-  dispute   Dispute?
-  reviews   Review[]
+  listing  Listing   @relation(fields: [listing_id], references: [listing_id])
+  buyer    User      @relation("Buyer", fields: [buyer_id], references: [user_id])
+  seller   User      @relation("Seller", fields: [seller_id], references: [user_id])
+  payments Payment[]
+  messages Message[]
+  dispute  Dispute?
+  reviews  Review[]
+  payout   Payout?
 
-  @@index([buyerId])
-  @@index([sellerId])
+  @@index([buyer_id])
+  @@index([seller_id])
   @@index([status])
-  @@index([createdAt(sort: Desc)])
+  @@index([created_at(sort: Desc)])
+  @@map("t_transactions")
 }
 
 enum TransactionStatus {
@@ -234,35 +287,34 @@ enum TransactionStatus {
   CANCELLED
 }
 
-// ===========================================
-// Payments
-// ===========================================
-
+/// Payment: Xendit payment records
+/// Multiple payments per transaction allowed (retry scenarios)
 model Payment {
-  id            String        @id @default(uuid())
-  transactionId String
-  xenditId      String        @unique
-  method        PaymentMethod
-  amount        Int
-  status        PaymentStatus @default(PENDING)
-  paidAt        DateTime?
-  expiredAt     DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  payment_id        String        @id @default(uuid())
+  transaction_id    String
+  xendit_payment_id String        @unique // Idempotency key
+  payment_method    PaymentMethod
+  payment_amount    Int           // Amount in IDR
+  status            PaymentStatus @default(PENDING)
+  paid_at           DateTime?
+  expires_at        DateTime?     // Payment deadline (24hr default)
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
 
-  transaction Transaction @relation(fields: [transactionId], references: [id])
+  transaction Transaction @relation(fields: [transaction_id], references: [transaction_id])
 
-  @@index([transactionId])
-  @@index([xenditId])
+  @@index([transaction_id])
+  @@index([xendit_payment_id])
   @@index([status])
+  @@map("t_payments")
 }
 
 enum PaymentMethod {
-  VA
-  EWALLET
-  QRIS
-  CARD
-  RETAIL
+  VA       // Virtual Account
+  EWALLET  // E-wallet (OVO, GoPay, Dana)
+  QRIS     // QR Code
+  CARD     // Credit/Debit Card
+  RETAIL   // Retail outlets (Alfamart, Indomaret)
 }
 
 enum PaymentStatus {
@@ -273,35 +325,38 @@ enum PaymentStatus {
 }
 
 // ===========================================
-// Disputes
+// TRANSACTION TABLES (t_) - Disputes
 // ===========================================
 
+/// Dispute: Transaction complaints during verification period
+/// One dispute per transaction, lifecycle: OPEN → UNDER_REVIEW → RESOLVED
 model Dispute {
-  id            String           @id @default(uuid())
-  transactionId String           @unique
-  initiatorId   String
-  category      DisputeCategory
-  description   String           @db.Text
-  status        DisputeStatus    @default(OPEN)
-  resolution    DisputeResolution?
-  resolvedAt    DateTime?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  dispute_id       String             @id @default(uuid())
+  transaction_id   String             @unique
+  initiator_id     String             // Buyer who opened dispute
+  dispute_category DisputeCategory
+  description      String             @db.Text
+  status           DisputeStatus      @default(OPEN)
+  resolution       DisputeResolution?
+  resolved_at      DateTime?
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @updatedAt
 
-  transaction Transaction @relation(fields: [transactionId], references: [id])
-  initiator   User        @relation("Initiator", fields: [initiatorId], references: [id])
-  evidence    Evidence[]
+  transaction Transaction @relation(fields: [transaction_id], references: [transaction_id])
+  initiator   User        @relation("Initiator", fields: [initiator_id], references: [user_id])
+  evidences   Evidence[]
 
-  @@index([transactionId])
-  @@index([initiatorId])
+  @@index([transaction_id])
+  @@index([initiator_id])
   @@index([status])
+  @@map("t_disputes")
 }
 
 enum DisputeCategory {
-  NOT_AS_DESCRIBED
-  ACCESS_ISSUE
-  FRAUD
-  OTHER
+  NOT_AS_DESCRIBED  // Item tidak sesuai deskripsi
+  ACCESS_ISSUE      // Tidak bisa akses akun/item
+  FRAUD             // Penipuan
+  OTHER             // Lainnya
 }
 
 enum DisputeStatus {
@@ -311,62 +366,192 @@ enum DisputeStatus {
 }
 
 enum DisputeResolution {
-  FULL_REFUND
-  PARTIAL_REFUND
-  NO_REFUND
+  FULL_REFUND     // 100% refund to buyer
+  PARTIAL_REFUND  // Partial refund (negotiated)
+  NO_REFUND       // Seller wins dispute
 }
 
+/// Evidence: Dispute attachments - screenshots, videos, documents
+/// Both buyer and seller can upload evidence
 model Evidence {
-  id        String   @id @default(uuid())
-  disputeId String
-  url       String
-  type      String   // image, video, document
-  createdAt DateTime @default(now())
+  evidence_id      String   @id @default(uuid())
+  dispute_id       String
+  uploader_user_id String
+  file_url         String
+  file_type        String   // image, video, document
+  file_name        String
+  file_size_bytes  Int
+  created_at       DateTime @default(now())
 
-  dispute Dispute @relation(fields: [disputeId], references: [id])
+  dispute Dispute @relation(fields: [dispute_id], references: [dispute_id])
 
-  @@index([disputeId])
+  @@index([dispute_id])
+  @@map("t_evidences")
 }
 
 // ===========================================
-// Messages
+// TRANSACTION TABLES (t_) - Messages
 // ===========================================
 
+/// Message: Transaction chat messages
+/// Real-time chat antara buyer dan seller, scoped per transaction
 model Message {
-  id            String   @id @default(uuid())
-  transactionId String
-  senderId      String
-  content       String   @db.Text
-  attachment    String?
-  read          Boolean  @default(false)
-  createdAt     DateTime @default(now())
+  message_id      String    @id @default(uuid())
+  transaction_id  String
+  sender_user_id  String
+  message_content String    @db.Text
+  attachment_url  String?
+  is_read         Boolean   @default(false)
+  read_at         DateTime?
+  created_at      DateTime  @default(now())
 
-  transaction Transaction @relation(fields: [transactionId], references: [id])
-  sender      User        @relation("Sender", fields: [senderId], references: [id])
+  transaction Transaction @relation(fields: [transaction_id], references: [transaction_id])
+  sender      User        @relation("Sender", fields: [sender_user_id], references: [user_id])
 
-  @@index([transactionId])
-  @@index([senderId])
-  @@index([createdAt(sort: Desc)])
+  @@index([transaction_id])
+  @@index([sender_user_id])
+  @@index([created_at(sort: Desc)])
+  @@map("t_messages")
 }
 
 // ===========================================
-// Reviews
+// TRANSACTION TABLES (t_) - Reviews
 // ===========================================
 
+/// Review: Post-transaction ratings and reviews
+/// Both buyer and seller can review each other after COMPLETED transaction
 model Review {
-  id            String   @id @default(uuid())
-  transactionId String
-  reviewerId    String
-  reviewedId    String
-  rating        Int      // 1-5
-  comment       String?  @db.Text
-  createdAt     DateTime @default(now())
+  review_id        String   @id @default(uuid())
+  transaction_id   String
+  reviewer_user_id String
+  reviewed_user_id String
+  rating_score     Int      // 1-5 stars
+  review_comment   String?  @db.Text
+  created_at       DateTime @default(now())
 
-  transaction Transaction @relation(fields: [transactionId], references: [id])
-  reviewer    User        @relation("Reviewer", fields: [reviewerId], references: [id])
-  reviewed    User        @relation("Reviewed", fields: [reviewedId], references: [id])
+  transaction Transaction @relation(fields: [transaction_id], references: [transaction_id])
+  reviewer    User        @relation("Reviewer", fields: [reviewer_user_id], references: [user_id])
+  reviewed    User        @relation("Reviewed", fields: [reviewed_user_id], references: [user_id])
 
-  @@unique([transactionId, reviewerId])
-  @@index([reviewerId])
-  @@index([reviewedId])
+  @@unique([transaction_id, reviewer_user_id])
+  @@index([reviewer_user_id])
+  @@index([reviewed_user_id])
+  @@map("t_reviews")
+}
+
+// ===========================================
+// TRANSACTION TABLES (t_) - Payouts
+// ===========================================
+
+/// Payout: Fund releases to sellers after transaction completion
+/// One payout per transaction, tracks bank transfer status
+model Payout {
+  payout_id           String       @id @default(uuid())
+  transaction_id      String       @unique
+  seller_id           String
+  payout_amount       Int          // Amount after platform fee
+  bank_code           String
+  bank_name           String
+  account_number      String
+  account_holder_name String
+  status              PayoutStatus @default(PENDING)
+  processed_at        DateTime?
+  bank_reference      String?      // Bank reference number
+  failure_reason      String?
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+
+  transaction Transaction @relation(fields: [transaction_id], references: [transaction_id])
+  seller      User        @relation(fields: [seller_id], references: [user_id])
+
+  @@index([seller_id])
+  @@index([status])
+  @@map("t_payouts")
+}
+
+enum PayoutStatus {
+  PENDING      // Waiting to be processed
+  PROCESSING   // Transfer initiated
+  COMPLETED    // Successfully transferred
+  FAILED       // Transfer failed
+}
+
+// ===========================================
+// TRANSACTION TABLES (t_) - Notifications
+// ===========================================
+
+/// Notification: Push notification queue for users
+/// Tracks read status and supports various notification types
+model Notification {
+  notification_id   String           @id @default(uuid())
+  user_id           String
+  notification_type NotificationType
+  title             String
+  body              String
+  data_payload      Json?            // Additional data
+  is_read           Boolean          @default(false)
+  read_at           DateTime?
+  created_at        DateTime         @default(now())
+
+  user User @relation(fields: [user_id], references: [user_id])
+
+  @@index([user_id, is_read])
+  @@index([created_at(sort: Desc)])
+  @@map("t_notifications")
+}
+
+enum NotificationType {
+  PAYMENT_RECEIVED    // Buyer paid
+  ITEM_TRANSFERRED    // Seller transferred item
+  ITEM_CONFIRMED      // Buyer confirmed receipt
+  DISPUTE_OPENED      // Dispute opened
+  DISPUTE_RESOLVED    // Dispute resolved
+  NEW_MESSAGE         // New chat message
+  REVIEW_RECEIVED     // New review received
+  AUCTION_OUTBID      // Someone outbid you
+  AUCTION_WON         // You won the auction
+  AUCTION_ENDING_SOON // Auction ending in 1 hour
+  PAYOUT_COMPLETED    // Funds sent to bank
+}
+
+// ===========================================
+// TRANSACTION TABLES (t_) - Audit Logs
+// ===========================================
+
+/// AuditLog: Tracks all critical actions for security and compliance
+/// Immutable append-only table
+model AuditLog {
+  log_id               String   @id @default(uuid())
+  entity_type          String   // User, Transaction, Dispute, etc.
+  entity_id            String
+  action_type          String   // CREATE, UPDATE, DELETE, STATUS_CHANGE
+  action_description   String
+  old_value            Json?
+  new_value            Json?
+  performed_by_user_id String?  // null for SYSTEM actions
+  ip_address           String?
+  user_agent           String?
+  created_at           DateTime @default(now())
+
+  @@index([entity_type, entity_id])
+  @@index([performed_by_user_id])
+  @@index([created_at(sort: Desc)])
+  @@map("t_audit_logs")
+}
+
+// ===========================================
+// TRANSACTION TABLES (t_) - Rate Limiting
+// ===========================================
+
+/// RateLimit: Database-backed rate limiting
+/// Tracks request counts per key within time windows
+model RateLimit {
+  rate_limit_id   String   @id @default(uuid())
+  rate_limit_key  String   @unique // e.g., "user:123:listing.create"
+  request_count   Int      @default(1)
+  window_start_at DateTime
+  expires_at      DateTime
+
+  @@index([expires_at])
+  @@map("t_rate_limits")
 }
