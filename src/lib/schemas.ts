@@ -1,6 +1,112 @@
 import { z } from "zod";
 
 // ===========================================
+// File Upload Constants
+// ===========================================
+
+/**
+ * Allowed MIME types for image uploads
+ * Used for: listing photos, avatar, transfer proof
+ */
+export const ALLOWED_IMAGE_MIME_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+] as const;
+
+/**
+ * Allowed MIME types for video uploads
+ * Used for: dispute evidence
+ */
+export const ALLOWED_VIDEO_MIME_TYPES = [
+    "video/mp4",
+    "video/webm",
+    "video/quicktime", // .mov files
+] as const;
+
+/**
+ * Allowed MIME types for document uploads
+ * Used for: dispute evidence
+ */
+export const ALLOWED_DOCUMENT_MIME_TYPES = [
+    "application/pdf",
+] as const;
+
+/**
+ * All allowed MIME types combined
+ */
+export const ALLOWED_MIME_TYPES = [
+    ...ALLOWED_IMAGE_MIME_TYPES,
+    ...ALLOWED_VIDEO_MIME_TYPES,
+    ...ALLOWED_DOCUMENT_MIME_TYPES,
+] as const;
+
+/**
+ * Magic bytes (file signatures) for content verification
+ * Prevents file extension spoofing (e.g., virus.exe renamed to virus.jpg)
+ */
+export const MAGIC_BYTES = {
+    // Images
+    jpeg: { bytes: [0xFF, 0xD8, 0xFF], offset: 0 },
+    png: { bytes: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], offset: 0 },
+    gif: { bytes: [0x47, 0x49, 0x46, 0x38], offset: 0 }, // GIF8
+    webp: { bytes: [0x52, 0x49, 0x46, 0x46], offset: 0, secondary: [0x57, 0x45, 0x42, 0x50], secondaryOffset: 8 }, // RIFF...WEBP
+
+    // Videos
+    mp4: { bytes: [0x66, 0x74, 0x79, 0x70], offset: 4 }, // ftyp at offset 4
+    webm: { bytes: [0x1A, 0x45, 0xDF, 0xA3], offset: 0 },
+    mov: { bytes: [0x66, 0x74, 0x79, 0x70, 0x71, 0x74], offset: 4 }, // ftypqt
+
+    // Documents
+    pdf: { bytes: [0x25, 0x50, 0x44, 0x46], offset: 0 }, // %PDF
+} as const;
+
+/**
+ * Maximum file sizes in bytes
+ */
+export const MAX_FILE_SIZE = {
+    image: 5 * 1024 * 1024,      // 5 MB
+    video: 50 * 1024 * 1024,     // 50 MB
+    document: 10 * 1024 * 1024,  // 10 MB
+    avatar: 2 * 1024 * 1024,     // 2 MB
+} as const;
+
+/**
+ * File upload limits per entity
+ */
+export const FILE_UPLOAD_LIMITS = {
+    listingPhotos: 5,      // Max 5 photos per listing
+    evidenceFiles: 10,     // Max 10 files per dispute
+    messageAttachments: 1, // Max 1 attachment per message
+} as const;
+
+// ===========================================
+// File Validation Schemas
+// ===========================================
+
+export const fileUploadSchema = z.object({
+    name: z.string().min(1),
+    size: z.number().int().positive(),
+    type: z.enum([...ALLOWED_MIME_TYPES]),
+});
+
+export const imageUploadSchema = fileUploadSchema.extend({
+    type: z.enum([...ALLOWED_IMAGE_MIME_TYPES]),
+    size: z.number().int().max(MAX_FILE_SIZE.image, `Ukuran file maksimal ${MAX_FILE_SIZE.image / 1024 / 1024}MB`),
+});
+
+export const videoUploadSchema = fileUploadSchema.extend({
+    type: z.enum([...ALLOWED_VIDEO_MIME_TYPES]),
+    size: z.number().int().max(MAX_FILE_SIZE.video, `Ukuran file maksimal ${MAX_FILE_SIZE.video / 1024 / 1024}MB`),
+});
+
+export const documentUploadSchema = fileUploadSchema.extend({
+    type: z.enum([...ALLOWED_DOCUMENT_MIME_TYPES]),
+    size: z.number().int().max(MAX_FILE_SIZE.document, `Ukuran file maksimal ${MAX_FILE_SIZE.document / 1024 / 1024}MB`),
+});
+
+// ===========================================
 // Listing Schemas
 // ===========================================
 
