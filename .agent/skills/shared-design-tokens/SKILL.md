@@ -15,12 +15,12 @@ description: Color palette and design tokens shared between web and mobile front
 
 | Token | Hex | RGB | Usage |
 |-------|-----|-----|-------|
-| `brand-primary` | `#10b981` | `16, 185, 129` | Primary buttons, CTAs, prices |
-| `brand-primary-light` | `#34d399` | `52, 211, 153` | Hover states, highlights |
-| `brand-primary-dark` | `#059669` | `5, 150, 105` | Active/pressed states |
-| `brand-primary-subtle` | `#d1fae5` | `209, 250, 229` | Light backgrounds, badges |
-| `brand-secondary` | `#0ea5e9` | `14, 165, 233` | Links, info states |
-| `brand-secondary-dark` | `#0284c7` | `2, 132, 199` | Hover states |
+| `brand-primary` | `#6366f1` | `99, 102, 241` | Primary buttons, CTAs, prices |
+| `brand-primary-light` | `#818cf8` | `129, 140, 248` | Hover states, highlights |
+| `brand-primary-dark` | `#4f46e5` | `79, 70, 229` | Active/pressed states |
+| `brand-primary-subtle` | `#e0e7ff` | `224, 231, 255` | Light backgrounds, badges |
+| `brand-secondary` | `#06b6d4` | `6, 182, 212` | Links, info states |
+| `brand-secondary-dark` | `#0891b2` | `8, 145, 178` | Hover states |
 
 ### Accent Colors (Premium)
 
@@ -34,7 +34,7 @@ description: Color palette and design tokens shared between web and mobile front
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `success` | `#10b981` | Success messages, confirmations |
+| `success` | `#22c55e` | Success messages, confirmations |
 | `warning` | `#f59e0b` | Warnings, pending states |
 | `error` | `#ef4444` | Errors, destructive actions |
 | `error-light` | `#fecaca` | Error backgrounds |
@@ -59,18 +59,18 @@ description: Color palette and design tokens shared between web and mobile front
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `gradient-primary` | `linear-gradient(135deg, #10b981 0%, #059669 100%)` | Primary CTAs, hero elements |
+| `gradient-primary` | `linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)` | Primary CTAs, hero elements |
 | `gradient-surface` | `linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%)` | Card surfaces (light) |
 | `gradient-dark` | `linear-gradient(180deg, #27272a 0%, #18181b 100%)` | Card surfaces (dark) |
 | `gradient-glass` | `linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)` | Glassmorphism overlay |
-| `gradient-hero` | `linear-gradient(135deg, #10b981 0%, #0ea5e9 100%)` | Hero sections |
+| `gradient-hero` | `linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%)` | Hero sections |
 
 ### 3D Element Support
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `shadow-3d` | `0 20px 40px rgba(16, 185, 129, 0.15)` | 3D element shadows |
-| `shadow-3d-hover` | `0 30px 60px rgba(16, 185, 129, 0.25)` | 3D hover lift |
+| `shadow-3d` | `0 20px 40px rgba(99, 102, 241, 0.15)` | 3D element shadows |
+| `shadow-3d-hover` | `0 30px 60px rgba(99, 102, 241, 0.25)` | 3D hover lift |
 | `shadow-card` | `0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)` | Card elevation |
 | `shadow-card-hover` | `0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)` | Card hover |
 
@@ -91,7 +91,7 @@ description: Color palette and design tokens shared between web and mobile front
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `font-family` | `Inter, system-ui, sans-serif` | All text |
+| `font-family` | `-apple-system, BlinkMacSystemFont, SF Pro Display, SF Pro Text, system-ui, sans-serif` | All text |
 | `font-size-xs` | `12px` / `0.75rem` | Captions |
 | `font-size-sm` | `14px` / `0.875rem` | Body small |
 | `font-size-base` | `16px` / `1rem` | Body |
@@ -137,35 +137,35 @@ export default {
     extend: {
       colors: {
         brand: {
-          primary: "#10b981",
-          "primary-light": "#34d399",
-          "primary-dark": "#059669",
-          "primary-subtle": "#d1fae5",
-          secondary: "#0ea5e9",
-          "secondary-dark": "#0284c7",
+          primary: "#6366f1",
+          "primary-light": "#818cf8",
+          "primary-dark": "#4f46e5",
+          "primary-subtle": "#e0e7ff",
+          secondary: "#06b6d4",
+          "secondary-dark": "#0891b2",
         },
         accent: {
           gold: "#f59e0b",
           "gold-light": "#fbbf24",
           "gold-dark": "#d97706",
         },
-        success: "#10b981",
+        success: "#22c55e",
         warning: "#f59e0b",
         error: "#ef4444",
         "error-light": "#fecaca",
-        info: "#0ea5e9",
+        info: "#06b6d4",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-        "gradient-hero": "linear-gradient(135deg, #10b981 0%, #0ea5e9 100%)",
+        "gradient-primary": "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+        "gradient-hero": "linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)",
         "gradient-glass": "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)",
       },
       boxShadow: {
-        "3d": "0 20px 40px rgba(16, 185, 129, 0.15)",
-        "3d-hover": "0 30px 60px rgba(16, 185, 129, 0.25)",
+        "3d": "0 20px 40px rgba(99, 102, 241, 0.15)",
+        "3d-hover": "0 30px 60px rgba(99, 102, 241, 0.25)",
         "card": "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
         "card-hover": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
       },
