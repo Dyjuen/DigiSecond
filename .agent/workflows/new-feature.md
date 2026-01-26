@@ -18,28 +18,12 @@ Ensure the feature is documented with:
 
 If not documented, update spec.md first and get team approval.
 
-## 2. Switch to your role branch
+## 2. Ensure you're on main
 
-> **IMPORTANT**: We use role-based branches, NOT feature branches.
-
-| Role | Branch | Files You Can Modify |
-|------|--------|---------------------|
-| Backend | `backend` | `src/server/**`, `prisma/**` |
-| Frontend Web | `frontend-web` | `src/app/**`, `src/components/**` |
-| Frontend Mobile | `mobile` | `mobile/src/**` |
-
+// turbo
 ```bash
-# Backend developer
-git checkout backend
-git pull origin backend
-
-# Frontend Web developer
-git checkout frontend-web
-git pull origin frontend-web
-
-# Frontend Mobile developer
-git checkout mobile
-git pull origin mobile
+git checkout main
+git pull origin main
 ```
 
 ## 3. Backend: Write tests first
@@ -88,15 +72,10 @@ pnpm dev          # Web
 cd mobile && npx expo start  # Mobile
 ```
 
-## 8. Commit to your role branch
+## 8. Commit to main
 
 ```bash
 git add .
 git commit -m "feat([scope]): [description]"
-git push origin [your-role-branch]
+git push origin main
 ```
-
-## 9. Create PR to main
-
-When feature is complete, create a Pull Request from your role branch to `main`.
-Team lead reviews and merges.
