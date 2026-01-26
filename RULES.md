@@ -55,39 +55,44 @@ e2e/                                 # Playwright E2E tests
 
 ---
 
-## 3. Role-Based Branch Strategy
+## 3. Single Branch Strategy (Main-Only)
 
-> **RULE**: We use role-based branches, NOT feature branches. Each team member works on their designated branch.
+> **RULE**: We use a single `main` branch for all development. All changes are committed directly to `main` or via short-lived feature branches.
 
 ### Branch Structure
 
 ```
-main                 ← Production-ready code (protected)
-├── backend          ← Backend developer's branch
-├── frontend-web     ← Frontend Web developer's branch  
-└── mobile           ← Frontend Mobile developer's branch
+main                 ← Primary development branch (all work happens here)
+└── feature/*        ← Optional: Short-lived branches for large changes only
 ```
-
-### Branch Ownership
-
-| Branch | Owner | Scope |
-|--------|-------|-------|
-| `main` | Team Lead | Merged from role branches via PR |
-| `backend` | Backend Dev | `src/server/**`, `prisma/**`, `src/lib/schemas.ts` |
-| `frontend-web` | Web Dev | `src/app/**`, `src/components/**`, `src/styles/**` |
-| `mobile` | Mobile Dev | `mobile/src/**` |
 
 ### Workflow
 
-1. Always work on your role branch
-2. Pull latest before starting work: `git pull origin [branch]`
+1. **Always work on `main`** branch for regular development
+2. Pull latest before starting work: `git pull origin main`
 3. Commit frequently with conventional commits
-4. Create PR to `main` when feature is complete
-5. Another team member reviews before merge
+4. Push changes directly to `main`: `git push origin main`
+5. Run tests before pushing to ensure nothing breaks
 
-### Shared Files
+### When to Use Feature Branches
 
-For files used by multiple roles (e.g., `src/lib/schemas.ts`), coordinate via team chat before editing.
+| Scenario | Approach |
+|----------|----------|
+| Small changes, bug fixes | Commit directly to `main` |
+| Large features (multi-day) | Create `feature/[name]`, merge via PR when done |
+| Experimental changes | Create `feature/[name]`, delete if abandoned |
+
+### Feature Branch Rules
+
+If using a feature branch:
+1. Name it `feature/[short-description]` (e.g., `feature/payment-integration`)
+2. Keep it short-lived (max 2-3 days)
+3. Rebase on `main` frequently: `git pull --rebase origin main`
+4. Delete after merging
+
+### Conflict Resolution
+
+Since everyone works on `main`, coordinate via team chat before editing shared files (e.g., `src/lib/schemas.ts`, `prisma/schema.prisma`).
 
 ---
 
