@@ -20,6 +20,76 @@ export const authRouter = createTRPCRouter({
     }),
 
     /**
+     * User Registration
+     */
+    register: publicProcedure
+        .input(
+            z.object({
+                email: z.string().email(),
+                password: z.string().min(8),
+                name: z.string().min(1).max(100),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const existing = await ctx.db.user.findUnique({ where: { email: input.email } });
+            if (existing) {
+                throw new TRPCError({ code: "CONFLICT", message: "Email sudah terdaftar" });
+            }
+            const bcrypt = require("bcryptjs");
+            const hash = await bcrypt.hash(input.password, 10);
+            const user = await ctx.db.user.create({
+                data: {
+                    email: input.email,
+                    password_hash: hash,
+                    name: input.name,
+                    is_verified: false,
+                    is_suspended: false,
+                },
+                select: {
+                    user_id: true,
+                    email: true,
+                    name: true,
+                    is_verified: true,
+                },
+            });
+            return user;
+        }),
+
+    /**
+     * Request Password Reset
+     */
+    requestPasswordReset: publicProcedure
+        .input(z.object({ email: z.string().email() }))
+        .mutation(async ({ ctx, input }) => {
+            const user = await ctx.db.user.findUnique({ where: { email: input.email } });
+            if (!user) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Email tidak ditemukan" });
+            }
+            return { ok: true };
+        }),
+
+    /**
+     * Reset Password
+     */
+    resetPassword: publicProcedure
+        .input(z.object({
+            token: z.string(),
+            newPassword: z.string().min(8),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            return { ok: true };
+        }),
+
+    /**
+     * Email Verification
+     */
+    verifyEmail: publicProcedure
+        .input(z.object({ token: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            return { ok: true };
+        }),
+
+    /**
      * Akses User untuk lihat Profile Sendiri
      */
     getMe: protectedProcedure.query(async ({ ctx }) => {
@@ -37,14 +107,9 @@ export const authRouter = createTRPCRouter({
                 updated_at: true,
             },
         });
-
         if (!user) {
-            throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "User tidak ditemukan",
-            });
+            throw new TRPCError({ code: "NOT_FOUND", message: "User tidak ditemukan" });
         }
-
         return user;
     }),
 
