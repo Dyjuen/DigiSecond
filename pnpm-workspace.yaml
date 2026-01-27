@@ -1,3 +1,6 @@
+packages:
+  - 'mobile'
+
 ignoredBuiltDependencies:
   - '@prisma/client'
   - '@prisma/engines'
