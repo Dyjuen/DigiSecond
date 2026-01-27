@@ -1,6 +1,6 @@
 import { createTRPCRouter } from "./trpc";
-// import { authRouter } from "./routers/auth";
-// import { userRouter } from "./routers/user";
+import { authRouter } from "./routers/auth";
+import { userRouter } from "./routers/user";
 // import { listingRouter } from "./routers/listing";
 // import { transactionRouter } from "./routers/transaction";
 // import { paymentRouter } from "./routers/payment";
@@ -13,8 +13,8 @@ import { createTRPCRouter } from "./trpc";
  * All routers are merged here
  */
 export const appRouter = createTRPCRouter({
-    // auth: authRouter,
-    // user: userRouter,
+    auth: authRouter,
+    user: userRouter,
     // listing: listingRouter,
     // transaction: transactionRouter,
     // payment: paymentRouter,

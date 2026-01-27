@@ -4,11 +4,26 @@ import {
     type DefaultSession,
     type NextAuthOptions,
 } from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import nodemailer from "nodemailer";
 import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
+import EmailProvider from "next-auth/providers/email";
+import FacebookProvider from "next-auth/providers/facebook";
 import { db } from "./db";
+
+// Small helper to read environment variables and optionally throw
+function envOrUndefined(key: string): string | undefined {
+    const v = process.env[key];
+    return v === undefined || v === "" ? undefined : v;
+}
+
+function envOrThrow(key: string): string {
+    const v = envOrUndefined(key);
+    if (!v) throw new Error(`Missing required environment variable: ${key}`);
+    return v;
+}
+
+export type Role = "BUYER" | "SELLER" | "ADMIN";
 
 /**
  * Module augmentation for next-auth types
@@ -55,94 +70,87 @@ export const authOptions: NextAuthOptions = {
         error: "/login",
         verifyRequest: "/verify-email",
     },
-    providers: [
-        GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-            profile(profile) {
-                return {
-                    id: profile.sub,
-                    email: profile.email,
-                    name: profile.name,
-                    image: profile.picture,
-                    role: "BUYER" as const,
-                    verified: true,
-                    suspended: false,
-                };
-            },
-        }),
-        CredentialsProvider({
-            name: "credentials",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
-            },
-            async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) {
-                    throw new Error("Email dan password diperlukan");
-                }
+    providers: (() => {
+        const list: any[] = [];
 
-                const user = await db.user.findUnique({
-                    where: { email: credentials.email },
-                });
+        const googleId = envOrUndefined("GOOGLE_CLIENT_ID");
+        const googleSecret = envOrUndefined("GOOGLE_CLIENT_SECRET");
+        if (googleId && googleSecret) {
+            list.push(
+                GoogleProvider({
+                    clientId: googleId,
+                    clientSecret: googleSecret,
+                    profile(profile) {
+                        return {
+                            id: profile.sub,
+                            email: profile.email,
+                            name: profile.name,
+                            image: profile.picture,
+                            role: "BUYER" as const,
+                            verified: true,
+                            suspended: false,
+                        };
+                    },
+                })
+            );
+        } else {
+            console.warn("Google OAuth not configured (missing GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET)");
+        }
 
-                if (!user || !user.passwordHash) {
-                    throw new Error("Email atau password salah");
-                }
+        const emailServer = envOrUndefined("EMAIL_SERVER");
+        const emailFrom = envOrUndefined("EMAIL_FROM");
+        if (emailServer && emailFrom) {
+            list.push(
+                EmailProvider({
+                    server: emailServer,
+                    from: emailFrom,
+                    async sendVerificationRequest({ identifier, url, provider }) {
+                        const { host } = new URL(url);
 
-                const isValid = await bcrypt.compare(
-                    credentials.password,
-                    user.passwordHash
-                );
+                        // provider.server may be a string (URI) or an object with auth
+                        const transportConfig = typeof provider.server === "string" ? provider.server : (provider.server as any);
+                        const transport = nodemailer.createTransport(transportConfig as any);
 
-                if (!isValid) {
-                    throw new Error("Email atau password salah");
-                }
+                        const text = `Sign in to ${host}\n\n${url}\n\n`;
+                        const html = `<p>Sign in to <strong>${host}</strong></p><p><a href="${url}">Click here to sign in</a></p>`;
 
-                if (user.suspended) {
-                    throw new Error("Akun Anda telah dinonaktifkan");
-                }
+                        const result = await transport.sendMail({
+                            to: identifier,
+                            from: provider.from,
+                            subject: `Sign in to ${host}`,
+                            text,
+                            html,
+                        });
 
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    image: user.avatar,
-                    role: user.role,
-                    verified: user.verified,
-                    suspended: user.suspended,
-                };
-            },
-        }),
-    ],
-    callbacks: {
-        jwt({ token, user }) {
-            if (user) {
-                token.id = user.id;
-                token.role = user.role;
-                token.verified = user.verified;
-                token.suspended = user.suspended;
-            }
-            return token;
-        },
-        session({ session, token }) {
-            if (token && session.user) {
-                session.user.id = token.id;
-                session.user.role = token.role;
-                session.user.verified = token.verified;
-                session.user.suspended = token.suspended;
-            }
-            return session;
-        },
-    },
-    events: {
-        async signIn({ user, isNewUser }) {
-            if (isNewUser) {
-                // Log new user registration
-                console.log(`New user registered: ${user.email}`);
-            }
-        },
-    },
+                        const rejected = (result as any).rejected ?? [];
+                        const pending = (result as any).pending ?? [];
+                        const failed = rejected.concat(pending).filter(Boolean);
+                        if (failed.length) {
+                            console.error(`Email(s) could not be sent to: ${failed.join(", ")}`);
+                            throw new Error(`Email(s) could not be sent to: ${failed.join(", ")}`);
+                        }
+                    },
+                })
+            );
+        } else {
+            console.warn("Email provider not configured (missing EMAIL_SERVER/EMAIL_FROM)");
+        }
+
+        const fbId = envOrUndefined("FACEBOOK_CLIENT_ID");
+        const fbSecret = envOrUndefined("FACEBOOK_CLIENT_SECRET");
+        if (fbId && fbSecret) {
+            list.push(
+                FacebookProvider({
+                    clientId: fbId,
+                    clientSecret: fbSecret,
+                })
+            );
+        } else {
+            console.warn("Facebook OAuth not configured (missing FACEBOOK_CLIENT_ID/FACEBOOK_CLIENT_SECRET)");
+        }
+
+        return list;
+    })(),
 };
 
 /**
