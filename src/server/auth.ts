@@ -1,14 +1,14 @@
 import { type GetServerSidePropsContext } from "next";
 import {
     getServerSession,
-    type DefaultSession,
     type NextAuthOptions,
 } from "next-auth";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import nodemailer from "nodemailer";
+import * as nodemailer from "nodemailer";
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
 import FacebookProvider from "next-auth/providers/facebook";
+import AppleProvider from "next-auth/providers/apple";
 import { db } from "./db";
 
 // Small helper to read environment variables and optionally throw
@@ -23,24 +23,27 @@ function envOrThrow(key: string): string {
     return v;
 }
 
-export type Role = "BUYER" | "SELLER" | "ADMIN";
+export type Role = "USER" | "ADMIN";
 
 /**
  * Module augmentation for next-auth types
  * Adds custom fields to the session user
  */
 declare module "next-auth" {
-    interface Session extends DefaultSession {
+    interface Session {
         user: {
             id: string;
-            role: "BUYER" | "SELLER" | "ADMIN";
+            role: "USER" | "ADMIN";
             verified: boolean;
             suspended: boolean;
-        } & DefaultSession["user"];
+            name?: string | null;
+            email?: string | null;
+            image?: string | null;
+        };
     }
 
     interface User {
-        role: "BUYER" | "SELLER" | "ADMIN";
+        role: "USER" | "ADMIN";
         verified: boolean;
         suspended: boolean;
     }
@@ -49,7 +52,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
     interface JWT {
         id: string;
-        role: "BUYER" | "SELLER" | "ADMIN";
+        role: "USER" | "ADMIN";
         verified: boolean;
         suspended: boolean;
     }
@@ -70,6 +73,26 @@ export const authOptions: NextAuthOptions = {
         error: "/login",
         verifyRequest: "/verify-email",
     },
+    callbacks: {
+        async jwt({ token, user }) {
+            if (user) {
+                token.id = user.id;
+                token.role = user.role;
+                token.verified = user.verified;
+                token.suspended = user.suspended;
+            }
+            return token;
+        },
+        async session({ session, token }) {
+            if (token && session.user) {
+                session.user.id = token.id as string;
+                session.user.role = token.role as "USER" | "ADMIN";
+                session.user.verified = token.verified as boolean;
+                session.user.suspended = token.suspended as boolean;
+            }
+            return session;
+        },
+    },
     providers: (() => {
         const list: any[] = [];
 
@@ -86,7 +109,7 @@ export const authOptions: NextAuthOptions = {
                             email: profile.email,
                             name: profile.name,
                             image: profile.picture,
-                            role: "BUYER" as const,
+                            role: "USER" as const,
                             verified: true,
                             suspended: false,
                         };
@@ -147,6 +170,39 @@ export const authOptions: NextAuthOptions = {
             );
         } else {
             console.warn("Facebook OAuth not configured (missing FACEBOOK_CLIENT_ID/FACEBOOK_CLIENT_SECRET)");
+        }
+
+        const appleId = envOrUndefined("APPLE_CLIENT_ID");
+        const appleTeam = envOrUndefined("APPLE_TEAM_ID");
+        const appleKeyId = envOrUndefined("APPLE_KEY_ID");
+        const applePrivateKey = envOrUndefined("APPLE_PRIVATE_KEY");
+        if (appleId && appleTeam && appleKeyId && applePrivateKey) {
+            list.push(
+                AppleProvider({
+                    clientId: appleId,
+                    clientSecret: {
+                        teamId: appleTeam,
+                        privateKey: applePrivateKey.replace(/\\n/g, "\n"),
+                        keyId: appleKeyId,
+                        clientId: appleId,
+                    } as any,
+                    profile(profile: any) {
+                        return {
+                            id: profile.sub,
+                            email: profile.email,
+                            name: profile.name?.firstName
+                                ? `${profile.name.firstName} ${profile.name.lastName ?? ""}`
+                                : profile.email,
+                            image: null,
+                            role: "USER" as const,
+                            verified: true,
+                            suspended: false,
+                        };
+                    },
+                })
+            );
+        } else {
+            console.warn("Apple OAuth not configured (missing APPLE_CLIENT_ID/APPLE_TEAM_ID/APPLE_KEY_ID/APPLE_PRIVATE_KEY)");
         }
 
         return list;

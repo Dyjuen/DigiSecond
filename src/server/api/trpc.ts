@@ -1,9 +1,9 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { type Session } from "next-auth";
 import superjson from "superjson";
-import { ZodError } from "zod";
+import { z } from "zod";
 import { db } from "../db";
-import { getServerAuthSession, type Role } from "../auth";
+import { getServerAuthSession } from "../auth";
 
 /**
  * tRPC Context
@@ -25,15 +25,12 @@ export const createTRPCContext = async () => {
     return createInnerTRPCContext({ session });
 };
 
-type Context = Awaited<ReturnType<typeof createTRPCContext>>;
-type AuthenticatedContext = Context & {
-    session: NonNullable<Context["session"]>;
-};
+export type Context = Awaited<ReturnType<typeof createTRPCContext>>;
 
 /**
  * tRPC Initialization
  */
-const t = initTRPC.context<typeof createTRPCContext>().create({
+const t = initTRPC.context<Context>().create({
     transformer: superjson,
     errorFormatter({ shape, error }) {
         return {
@@ -41,7 +38,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
             data: {
                 ...shape.data,
                 zodError:
-                    error.cause instanceof ZodError ? error.cause.flatten() : null,
+                    error.cause instanceof z.ZodError ? error.cause.flatten() : null,
             },
         };
     },
@@ -77,7 +74,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
     return next({
         ctx: {
             ...ctx,
-            session: ctx.session as NonNullable<typeof ctx.session>,
+            session: { ...ctx.session, user: ctx.session.user },
         },
     });
 });
@@ -102,35 +99,7 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
     if (ctx.session.user.role !== "ADMIN") {
         throw new TRPCError({
             code: "FORBIDDEN",
-            message: "Anda tidak memiliki akses admin",
-        });
-    }
-    return next({ ctx });
-});
-
-/**
- * Seller procedure - requires seller or admin role
- */
-export const sellerProcedure = protectedProcedure.use(({ ctx, next }) => {
-    const role = ctx.session.user.role;
-    if (role !== "SELLER" && role !== "ADMIN") {
-        throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Anda harus menjadi penjual untuk mengakses ini",
-        });
-    }
-    return next({ ctx });
-});
-
-/**
- * Buyer procedure - requires buyer or admin role
- */
-export const buyerProcedure = protectedProcedure.use(({ ctx, next }) => {
-    const role = ctx.session.user.role;
-    if (role !== "BUYER" && role !== "ADMIN") {
-        throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Anda harus menjadi pembeli untuk mengakses ini",
+            message: "Anda tidak memiliki akses",
         });
     }
     return next({ ctx });

@@ -74,41 +74,6 @@ export const authRouter = createTRPCRouter({
         }),
 
     /**
-     * Ubah Role jadi Seller
-     */
-    requestSellerRole: protectedProcedure.mutation(async ({ ctx }) => {
-        const currentRole = ctx.session.user.role;
-
-        if (currentRole === "SELLER" || currentRole === "ADMIN") {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Anda sudah memiliki akses penjual",
-            });
-        }
-
-        if (!ctx.session.user.verified) {
-            throw new TRPCError({
-                code: "FORBIDDEN",
-                message: "Anda harus memverifikasi email terlebih dahulu",
-            });
-        }
-
-        const updated = await ctx.db.user.update({
-            where: { user_id: ctx.session.user.id },
-            data: { role: "SELLER" },
-            select: {
-                user_id: true,
-                role: true,
-            },
-        });
-
-        return {
-            success: true,
-            newRole: updated.role,
-        };
-    }),
-
-    /**
      * Akses Admin buat Suspend/Unsuspend User
      */
     toggleUserSuspension: adminProcedure

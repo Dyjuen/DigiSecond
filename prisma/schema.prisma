@@ -99,7 +99,7 @@ model Session {
 model VerificationToken {
   identifier String
   token      String   @unique
-  expires_at DateTime
+  expires    DateTime
 
   @@unique([identifier, token])
   @@map("m_verification_tokens")

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "~/styles/globals.css";
 import { Footer } from "@/components/layout/Footer";
 import { CursorProvider, Cursor, CursorFollow } from "@/components/ui/custom-cursor";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -52,12 +53,13 @@ export default function RootLayout({
     return (
         <html lang="id" className={inter.variable}>
             <body className="min-h-screen bg-white antialiased dark:bg-gray-900 overflow-x-hidden">
-                <CursorProvider>
-                    <Cursor />
-                    <CursorFollow>Buyer</CursorFollow>
-                    {/* TODO: Add providers (tRPC, NextAuth, React Query) */}
-                    {children}
-                </CursorProvider>
+                <AuthProvider>
+                    <CursorProvider>
+                        <Cursor />
+                        <CursorFollow>Buyer</CursorFollow>
+                        {children}
+                    </CursorProvider>
+                </AuthProvider>
             </body>
         </html>
     );
