@@ -5,6 +5,7 @@ import {
     type NextAuthOptions,
 } from "next-auth";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import nodemailer from "nodemailer";
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
 import FacebookProvider from "next-auth/providers/facebook";
