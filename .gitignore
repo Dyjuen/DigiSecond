@@ -54,3 +54,4 @@ mobile/node_modules/
 
 # Turbo
 .turbo
+.expo/
