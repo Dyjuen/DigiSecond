@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuthStore } from "../stores/authStore";
 
-export const HomeHeader = () => {
+export const HomeHeader = ({ title }: { title?: string }) => {
     const theme = useTheme();
     const { user } = useAuthStore();
 
@@ -23,11 +23,15 @@ export const HomeHeader = () => {
         <Surface style={{ backgroundColor: theme.colors.background }} elevation={0}>
             <SafeAreaView edges={['top']} style={styles.safeArea}>
                 <View style={styles.container}>
-                    {/* Search Bar */}
-                    <TouchableOpacity style={[styles.searchBar, { backgroundColor: theme.colors.surfaceVariant }]}>
-                        <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.onSurfaceVariant} style={{ marginRight: 8 }} />
-                        <Text style={{ color: theme.colors.onSurfaceVariant }}>Cari di DigiSecond</Text>
-                    </TouchableOpacity>
+                    {/* Search Bar or Title */}
+                    {title ? (
+                        <Text variant="titleMedium" style={{ flex: 1, fontWeight: 'bold' }}>{title}</Text>
+                    ) : (
+                        <TouchableOpacity style={[styles.searchBar, { backgroundColor: theme.colors.surfaceVariant }]}>
+                            <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.onSurfaceVariant} style={{ marginRight: 8 }} />
+                            <Text style={{ color: theme.colors.onSurfaceVariant }}>Cari di DigiSecond</Text>
+                        </TouchableOpacity>
+                    )}
 
                     {/* Icons */}
                     <View style={styles.iconContainer}>

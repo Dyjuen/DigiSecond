@@ -29,18 +29,14 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="upload"
+                name="selling"
                 options={{
-                    title: 'Upload',
-                    tabBarIcon: ({ color }) => <MaterialCommunityIcons name="plus-box-outline" size={24} color={color} />,
-                    tabBarLabel: 'Upload'
+                    title: 'Jualan',
+                    headerShown: true, // Let the screen handle header or use layout's header
+                    header: () => <HomeHeader title="Jualan Saya" />,
+                    tabBarIcon: ({ color }) => <MaterialCommunityIcons name="store" size={24} color={color} />,
+                    tabBarLabel: 'Jualan'
                 }}
-                listeners={() => ({
-                    tabPress: (e) => {
-                        e.preventDefault();
-                        router.push('/listing/create');
-                    },
-                })}
             />
             <Tabs.Screen
                 name="settings"

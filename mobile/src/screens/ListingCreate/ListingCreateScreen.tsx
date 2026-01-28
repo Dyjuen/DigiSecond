@@ -2,21 +2,43 @@ import { useState } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text, Button, ProgressBar, useTheme, Surface } from "react-native-paper";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { useListingStore, CURRENT_USER_ID } from "../../stores/listingStore";
+import { useEffect } from "react";
 import Step1Basic from "./steps/Step1Basic";
 import Step2Photos from "./steps/Step2Photos";
 import Step3Details from "./steps/Step3Details";
 
 export default function ListingCreateScreen() {
     const theme = useTheme();
+    const { id } = useLocalSearchParams();
+    const addListing = useListingStore((state) => state.addListing);
+    const updateListing = useListingStore((state) => state.updateListing);
+    const getListingById = useListingStore((state) => state.getListingById);
+
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         name: "",
         category: "",
-        photos: [],
+        photos: [] as string[],
         price: "",
         description: "",
     });
+
+    useEffect(() => {
+        if (id && typeof id === 'string') {
+            const existing = getListingById(id);
+            if (existing) {
+                setFormData({
+                    name: existing.title,
+                    category: existing.category || "",
+                    photos: existing.photos || (existing.imageUrl ? [existing.imageUrl] : []),
+                    price: existing.price.toString(),
+                    description: existing.description,
+                });
+            }
+        }
+    }, [id]);
 
     const updateData = (key: string, value: any) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
@@ -25,8 +47,24 @@ export default function ListingCreateScreen() {
     const handleNext = () => {
         if (step < 3) setStep(step + 1);
         else {
-            // Create listing
-            console.log("Submit", formData);
+            const listingData = {
+                title: formData.name,
+                price: parseInt(formData.price) || 0,
+                description: formData.description,
+                category: formData.category,
+                photos: formData.photos,
+                imageUrl: formData.photos[0] || "https://picsum.photos/400/300", // Default or first photo
+            };
+
+            if (id && typeof id === 'string') {
+                updateListing(id, listingData);
+            } else {
+                addListing({
+                    id: Math.random().toString(36).substr(2, 9),
+                    sellerId: CURRENT_USER_ID,
+                    ...listingData,
+                });
+            }
             router.back();
         }
     };

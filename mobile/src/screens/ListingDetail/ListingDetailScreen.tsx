@@ -1,26 +1,52 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView, Image } from "react-native";
 import { Text, Button, Card, Avatar, Divider, useTheme } from "react-native-paper";
-import { useLocalSearchParams, Stack } from "expo-router";
-import { MOCK_LISTINGS } from "../Listings/ListingsScreen";
+import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { useListingStore } from "../../stores/listingStore";
 import { Skeleton } from "../../components/Skeleton";
 import { shadows } from "../../lib/theme";
+import { Alert } from "react-native";
 
 export default function ListingDetailScreen() {
+    const router = useRouter();
     const { id } = useLocalSearchParams();
     const theme = useTheme();
     const [loading, setLoading] = useState(true);
-    const [listing, setListing] = useState<typeof MOCK_LISTINGS[0] | null>(null);
+    const listing = useListingStore((state) => state.listings.find((l) => l.id === id));
+    const deleteListing = useListingStore((state) => state.deleteListing);
 
     useEffect(() => {
-        // Simulate fetching data
-        setLoading(true);
-        setTimeout(() => {
-            const found = MOCK_LISTINGS.find((l) => l.id === id);
-            setListing(found || null);
+        // Simulate fetching data for Skeleton effect
+        if (listing) {
+            setTimeout(() => setLoading(false), 500);
+        } else {
             setLoading(false);
-        }, 1500);
-    }, [id]);
+        }
+    }, [listing]);
+
+    const handleDelete = () => {
+        Alert.alert(
+            "Delete Listing",
+            "Are you sure you want to delete this listing?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => {
+                        if (typeof id === 'string') {
+                            deleteListing(id);
+                            router.back();
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleEdit = () => {
+        router.push(`/listing/create?id=${id}`);
+    };
 
     if (loading) {
         return (
@@ -93,7 +119,24 @@ export default function ListingDetailScreen() {
             </ScrollView>
 
             <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.outline }]}>
-                <Button mode="contained" onPress={() => alert("Proceed to Payment")} contentStyle={{ paddingVertical: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
+                    <Button
+                        mode="outlined"
+                        onPress={handleDelete}
+                        textColor={theme.colors.error}
+                        style={{ flex: 1, borderColor: theme.colors.error }}
+                    >
+                        Delete
+                    </Button>
+                    <Button
+                        mode="outlined"
+                        onPress={handleEdit}
+                        style={{ flex: 1 }}
+                    >
+                        Edit
+                    </Button>
+                </View>
+                <Button mode="contained" onPress={() => alert("Proceed to Payment")} contentStyle={{ paddingVertical: 8 }} style={{ marginTop: 10 }}>
                     Buy Now
                 </Button>
             </View>
