@@ -1,51 +1,72 @@
 import { MD3LightTheme, MD3DarkTheme } from "react-native-paper";
 
-/**
- * Shared colors - must match web (see shared-design-tokens)
- */
 const sharedColors = {
-    primary: "#22c55e",
-    primaryContainer: "#16a34a",
-    secondary: "#3b82f6",
-    secondaryContainer: "#2563eb",
+    primary: "#6366f1",
+    secondary: "#06b6d4",
+    tertiary: "#f59e0b", // accent gold
     error: "#ef4444",
-    errorContainer: "#fecaca",
 };
 
-/**
- * Light theme for React Native Paper
- */
 export const lightTheme = {
     ...MD3LightTheme,
     colors: {
         ...MD3LightTheme.colors,
         ...sharedColors,
+        primaryContainer: "#e0e7ff",
+        onPrimaryContainer: "#1e1b4b",
+        secondaryContainer: "#e0f2fe",
+        onSecondaryContainer: "#0e7490",
+        tertiaryContainer: "#fef3c7",
+        onTertiaryContainer: "#78350f",
+        errorContainer: "#fecaca",
+        onErrorContainer: "#7f1d1d",
         background: "#ffffff",
         surface: "#fafafa",
-        surfaceVariant: "#f5f5f5",
-        onSurface: "#171717",
-        onSurfaceVariant: "#737373",
-        outline: "#e5e5e5",
-        outlineVariant: "#d4d4d4",
+        surfaceVariant: "#f4f4f5",
+        onSurface: "#18181b",
+        onSurfaceVariant: "#71717a",
+        outline: "#e4e4e7",
+        outlineVariant: "#d4d4d8",
     },
 };
 
-/**
- * Dark theme for React Native Paper
- */
 export const darkTheme = {
     ...MD3DarkTheme,
     colors: {
         ...MD3DarkTheme.colors,
         ...sharedColors,
-        background: "#171717",
-        surface: "#262626",
-        surfaceVariant: "#303030",
+        primaryContainer: "#312e81", // Indigo 900
+        onPrimaryContainer: "#e0e7ff",
+        secondaryContainer: "#164e63", // Cyan 900
+        onSecondaryContainer: "#cffafe",
+        tertiaryContainer: "#78350f", // Amber 900
+        onTertiaryContainer: "#fef3c7",
+        errorContainer: "#7f1d1d", // Red 900
+        onErrorContainer: "#fecaca",
+        background: "#18181b",
+        surface: "#27272a",
+        surfaceVariant: "#3f3f46",
         onSurface: "#fafafa",
-        onSurfaceVariant: "#a3a3a3",
-        outline: "#404040",
-        outlineVariant: "#525252",
+        onSurfaceVariant: "#a1a1aa",
+        outline: "#3f3f46",
+        outlineVariant: "#52525b",
     },
 };
 
-export type AppTheme = typeof lightTheme;
+// Custom shadows for 3D elements (use with StyleSheet)
+export const shadows = {
+    shadow3d: {
+        shadowColor: "#6366f1",
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.15,
+        shadowRadius: 40,
+        elevation: 10,
+    },
+    shadowCard: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 4,
+    },
+};
