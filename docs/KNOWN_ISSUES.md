@@ -2,9 +2,12 @@
 
 ## Mobile Testing - React Version Mismatch
 
-**Status**: Unresolved  
-**Severity**: Development only (does not affect production)  
+**Status**: Deferred - Ignore  
+**Severity**: Minor (does not affect production or development)  
 **Date Identified**: 2026-01-28
+
+> [!NOTE]
+> This issue only affects automated unit tests. The app runs correctly in production and development (Expo Go, device builds). Safe to ignore during MVP phase. Will resolve naturally when upgrading to Next.js 15 + React 19.
 
 ### Description
 

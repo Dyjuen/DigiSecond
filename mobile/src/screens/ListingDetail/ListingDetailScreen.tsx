@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView, Image } from "react-native";
 import { Text, Button, Card, Avatar, Divider, useTheme } from "react-native-paper";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import { useListingStore } from "../../stores/listingStore";
+import { useListingStore, CURRENT_USER_ID } from "../../stores/listingStore";
 import { Skeleton } from "../../components/Skeleton";
 import { shadows } from "../../lib/theme";
 import { Alert } from "react-native";
@@ -14,6 +14,7 @@ export default function ListingDetailScreen() {
     const [loading, setLoading] = useState(true);
     const listing = useListingStore((state) => state.listings.find((l) => l.id === id));
     const deleteListing = useListingStore((state) => state.deleteListing);
+    const isOwner = listing?.sellerId === CURRENT_USER_ID;
 
     useEffect(() => {
         // Simulate fetching data for Skeleton effect
@@ -88,7 +89,7 @@ export default function ListingDetailScreen() {
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <Stack.Screen options={{ title: "Details", headerBackTitle: "Back" }} />
             <ScrollView>
-                <Image source={{ uri: listing.imageUrl }} style={styles.image} alt={listing.title} />
+                <Image source={{ uri: listing.imageUrl }} style={[styles.image, { backgroundColor: theme.colors.surfaceVariant }]} alt={listing.title} />
 
                 <View style={styles.content}>
                     <Text variant="headlineSmall" style={styles.title}>
@@ -119,26 +120,29 @@ export default function ListingDetailScreen() {
             </ScrollView>
 
             <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.outline }]}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
-                    <Button
-                        mode="outlined"
-                        onPress={handleDelete}
-                        textColor={theme.colors.error}
-                        style={{ flex: 1, borderColor: theme.colors.error }}
-                    >
-                        Delete
+                {isOwner ? (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
+                        <Button
+                            mode="outlined"
+                            onPress={handleDelete}
+                            textColor={theme.colors.error}
+                            style={{ flex: 1, borderColor: theme.colors.error }}
+                        >
+                            Delete
+                        </Button>
+                        <Button
+                            mode="outlined"
+                            onPress={handleEdit}
+                            style={{ flex: 1 }}
+                        >
+                            Edit
+                        </Button>
+                    </View>
+                ) : (
+                    <Button mode="contained" onPress={() => alert("Proceed to Payment")} contentStyle={{ paddingVertical: 8 }} style={{ marginTop: 0 }}>
+                        Buy Now
                     </Button>
-                    <Button
-                        mode="outlined"
-                        onPress={handleEdit}
-                        style={{ flex: 1 }}
-                    >
-                        Edit
-                    </Button>
-                </View>
-                <Button mode="contained" onPress={() => alert("Proceed to Payment")} contentStyle={{ paddingVertical: 8 }} style={{ marginTop: 10 }}>
-                    Buy Now
-                </Button>
+                )}
             </View>
         </View>
     );
@@ -156,7 +160,6 @@ const styles = StyleSheet.create({
     image: {
         width: "100%",
         height: 250,
-        backgroundColor: "#eee",
     },
     content: {
         padding: 16,
@@ -167,7 +170,6 @@ const styles = StyleSheet.create({
     },
     sellerCard: {
         marginBottom: 24,
-        backgroundColor: "white",
     },
     sellerContent: {
         flexDirection: "row",
