@@ -39,6 +39,16 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
+                name="chat"
+                options={{
+                    title: 'Chat',
+                    headerShown: true,
+                    header: () => <HomeHeader title="Chat" />,
+                    tabBarIcon: ({ color }) => <MaterialCommunityIcons name="message-text" size={24} color={color} />,
+                    tabBarLabel: 'Chat'
+                }}
+            />
+            <Tabs.Screen
                 name="settings"
                 options={{
                     title: 'Settings',

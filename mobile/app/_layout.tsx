@@ -43,6 +43,7 @@ export default function Layout() {
                 <Stack.Screen name="index" options={{ title: "DigiSecond" }} />
                 <Stack.Screen name="login" options={{ title: "Login", headerShown: false }} />
                 <Stack.Screen name="listing/[id]" options={{ title: "Listing Details" }} />
+                <Stack.Screen name="chat/[id]" options={{ title: "Chat" }} />
             </Stack>
         </PaperProvider>
     );
