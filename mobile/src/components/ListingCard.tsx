@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, ViewStyle } from "react-native";
 import { Text, Card, useTheme, IconButton } from "react-native-paper";
 import { shadows } from "../lib/theme";
 
@@ -9,7 +9,7 @@ interface ListingCardProps {
     price: number;
     imageUrl: string;
     onPress: () => void;
-    style?: any;
+    style?: ViewStyle;
 }
 
 export function ListingCard({ title, price, imageUrl, onPress, style }: ListingCardProps) {

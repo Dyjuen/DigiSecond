@@ -1,4 +1,4 @@
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { Text, TextInput, useTheme, Checkbox, Surface, Button } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -7,7 +7,7 @@ interface Step3Props {
         price: string;
         description: string;
     };
-    onChange: (key: string, value: any) => void;
+    onChange: (key: string, value: string) => void;
 }
 
 export default function Step3Details({ data, onChange }: Step3Props) {

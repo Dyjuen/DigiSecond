@@ -6,7 +6,6 @@ import {
     KeyboardAvoidingView,
     Platform,
     Image,
-    TouchableOpacity,
     Alert,
 } from "react-native";
 import { Text, TextInput, IconButton, useTheme, Menu } from "react-native-paper";
@@ -57,7 +56,7 @@ const INITIAL_MESSAGES: Message[] = [
 
 export default function ChatDetailScreen() {
     const theme = useTheme();
-    const { id, username } = useLocalSearchParams<{ id: string; username: string }>();
+    useLocalSearchParams<{ id: string; username: string }>();
     const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
     const [inputText, setInputText] = useState("");
     const [menuVisible, setMenuVisible] = useState(false);

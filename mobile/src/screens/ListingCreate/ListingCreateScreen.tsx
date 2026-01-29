@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Text, Button, ProgressBar, useTheme, Surface } from "react-native-paper";
+import { Text, Button, useTheme, Surface } from "react-native-paper";
 import { router, useLocalSearchParams } from "expo-router";
 import { useListingStore, CURRENT_USER_ID } from "../../stores/listingStore";
 import { useEffect } from "react";
@@ -40,7 +40,7 @@ export default function ListingCreateScreen() {
         }
     }, [id]);
 
-    const updateData = (key: string, value: any) => {
+    const updateData = (key: string, value: string | string[]) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
     };
 

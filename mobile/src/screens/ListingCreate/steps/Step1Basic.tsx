@@ -1,5 +1,5 @@
 import { View, StyleSheet, TouchableOpacity } from "react-native";
-import { Text, TextInput, useTheme, Surface } from "react-native-paper";
+import { Text, TextInput, useTheme } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 interface Step1Props {

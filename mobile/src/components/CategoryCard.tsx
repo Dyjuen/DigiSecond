@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, View, ImageBackground, TouchableOpacity } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -11,8 +11,6 @@ interface CategoryCardProps {
 }
 
 export function CategoryCard({ title, imageUrl, onPress }: CategoryCardProps) {
-    const theme = useTheme();
-
     return (
         <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.container}>
             <ImageBackground source={{ uri: imageUrl }} style={styles.imageBackground} imageStyle={styles.image}>

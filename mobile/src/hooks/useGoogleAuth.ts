@@ -22,7 +22,7 @@ export function useGoogleAuth({ onSuccess, onError }: UseGoogleAuthProps) {
         path: "redirect",
     });
 
-    const [request, response, promptAsync] = Google.useAuthRequest({
+    const [, response, promptAsync] = Google.useAuthRequest({
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
         androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
         redirectUri,
@@ -65,9 +65,10 @@ export function useGoogleAuth({ onSuccess, onError }: UseGoogleAuthProps) {
             setAuth(data.token, data.user);
 
             onSuccess?.();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Google auth error:", err);
-            onError?.(err.message || "Failed to authenticate");
+            const message = err instanceof Error ? err.message : "Failed to authenticate";
+            onError?.(message);
         } finally {
             setLoading(false);
         }

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Appearance, ColorSchemeName } from 'react-native';
+import { Appearance } from 'react-native';
 
 interface ThemeState {
     isDarkMode: boolean;
@@ -13,7 +13,7 @@ interface ThemeState {
 
 export const useThemeStore = create<ThemeState>()(
     persist(
-        (set, get) => ({
+        (set) => ({
             isDarkMode: Appearance.getColorScheme() === 'dark',
             useSystemTheme: true,
             toggleTheme: () => {

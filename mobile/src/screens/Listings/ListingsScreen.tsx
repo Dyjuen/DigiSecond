@@ -1,22 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
 import { useTheme } from "react-native-paper";
 import { CategoriesSection } from "../../components/CategoriesSection";
 import { AuctionsSection } from "../../components/AuctionsSection";
 import { NewListingsSection } from "../../components/NewListingsSection";
-import { useRouter } from "expo-router";
 
 
 
 export default function ListingsScreen() {
     const theme = useTheme();
-    const router = useRouter();
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        // Simulate network delay
-        setTimeout(() => setLoading(false), 2000);
-    }, []);
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

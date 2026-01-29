@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs, router } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from 'react-native-paper';
 import { HomeHeader } from '../../src/components/HomeHeader';

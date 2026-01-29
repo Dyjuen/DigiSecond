@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { List, Switch, Text, useTheme } from 'react-native-paper';
+import { List, Switch, useTheme } from 'react-native-paper';
 import { useThemeStore } from '../../stores/themeStore';
 
 export const SettingsScreen = () => {

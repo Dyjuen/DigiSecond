@@ -1,5 +1,5 @@
 import { View, StyleSheet, TouchableOpacity, Image } from "react-native";
-import { Text, Button, useTheme } from "react-native-paper";
+import { Text, useTheme } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from 'expo-image-picker';
 
@@ -7,7 +7,7 @@ interface Step2Props {
     data: {
         photos: string[];
     };
-    onChange: (key: string, value: any) => void;
+    onChange: (key: string, value: string[]) => void;
 }
 
 export default function Step2Photos({ data, onChange }: Step2Props) {
@@ -15,8 +15,8 @@ export default function Step2Photos({ data, onChange }: Step2Props) {
 
     const pickImage = async () => {
         // No permissions request is necessary for launching the image library
-        let result = await ImagePicker.launchImageLibraryAsync({
-            // @ts-ignore
+        const result = await ImagePicker.launchImageLibraryAsync({
+            // @ts-expect-error - MediaType is valid but types are outdated
             mediaTypes: ImagePicker.MediaType.Images,
             allowsMultipleSelection: true,
             selectionLimit: 5 - data.photos.length,

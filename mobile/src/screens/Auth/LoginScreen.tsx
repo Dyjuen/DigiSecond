@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Image, KeyboardAvoidingView, Platform } from "react-native";
+import { View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
 import { Text, Button, TextInput, ActivityIndicator, useTheme } from "react-native-paper";
 import { router } from "expo-router";
 import { useGoogleAuth } from "../../hooks/useGoogleAuth";
-import { useAuthStore } from "../../stores/authStore";
 
 export default function LoginScreen() {
     const theme = useTheme();
@@ -46,8 +45,9 @@ export default function LoginScreen() {
 
             alert(`Magic link sent to ${email}! Please check your email.`);
             setEmail("");
-        } catch (err: any) {
-            setError(err.message || "Failed to send magic link");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to send magic link";
+            setError(message);
         } finally {
             setEmailLoading(false);
         }
