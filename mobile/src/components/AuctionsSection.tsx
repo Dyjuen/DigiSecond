@@ -72,7 +72,6 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     scrollContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 8, // space for shadow
+        paddingHorizontal: 16
     },
 });

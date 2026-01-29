@@ -44,7 +44,7 @@ export function CategoriesSection() {
 const styles = StyleSheet.create({
     container: {
         marginTop: 16,
-        marginBottom: 8,
+        marginBottom: 16,
     },
     header: {
         flexDirection: 'row',

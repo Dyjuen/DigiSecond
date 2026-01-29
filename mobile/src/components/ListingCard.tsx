@@ -41,8 +41,8 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
                     {formattedPrice}
                 </Text>
                 <View style={styles.sellerInfo}>
-                    <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Jakarta</Text>
-                    <Text variant="labelSmall" style={{ color: theme.colors.outline }}> • 5.0</Text>
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>Jakarta</Text>
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}> • 5.0</Text>
                 </View>
             </Card.Content>
         </Card>

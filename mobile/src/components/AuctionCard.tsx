@@ -35,7 +35,7 @@ export function AuctionCard({ title, currentBid, timeLeft, imageUrl, onPress }: 
                     {title}
                 </Text>
                 <View style={styles.bidInfo}>
-                    <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Current Bid</Text>
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>Current Bid</Text>
                     <Text variant="titleMedium" style={{ color: theme.colors.primary, fontWeight: "bold" }}>
                         {formattedBid}
                     </Text>
