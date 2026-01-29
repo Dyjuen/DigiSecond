@@ -1,5 +1,5 @@
-import React from "react";
-import { StyleSheet, View, ImageBackground, TouchableOpacity } from "react-native";
+import React, { useRef } from "react";
+import { StyleSheet, View, ImageBackground, TouchableOpacity, Animated } from "react-native";
 import { Text } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -11,23 +11,49 @@ interface CategoryCardProps {
 }
 
 export function CategoryCard({ title, imageUrl, onPress }: CategoryCardProps) {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.95,
+            useNativeDriver: true,
+            speed: 20,
+        }).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            speed: 20,
+        }).start();
+    };
+
     return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.container}>
-            <ImageBackground source={{ uri: imageUrl }} style={styles.imageBackground} imageStyle={styles.image}>
-                <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.8)']}
-                    style={styles.gradient}
-                >
-                    <View style={styles.content}>
-                        <Text variant="titleMedium" style={styles.title}>{title}</Text>
-                        <View style={styles.exploreContainer}>
-                            <MaterialCommunityIcons name="arrow-right-circle" size={14} color="white" />
-                            <Text variant="labelSmall" style={styles.exploreText}>EXPLORE MORE</Text>
+        <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
+            <TouchableOpacity
+                onPress={onPress}
+                activeOpacity={0.9}
+                style={styles.container}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+            >
+                <ImageBackground source={{ uri: imageUrl }} style={styles.imageBackground} imageStyle={styles.image}>
+                    <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        style={styles.gradient}
+                    >
+                        <View style={styles.content}>
+                            <Text variant="titleMedium" style={styles.title}>{title}</Text>
+                            <View style={styles.exploreContainer}>
+                                <MaterialCommunityIcons name="arrow-right-circle" size={14} color="white" />
+                                <Text variant="labelSmall" style={styles.exploreText}>EXPLORE MORE</Text>
+                            </View>
                         </View>
-                    </View>
-                </LinearGradient>
-            </ImageBackground>
-        </TouchableOpacity>
+                    </LinearGradient>
+                </ImageBackground>
+            </TouchableOpacity>
+        </Animated.View>
     );
 }
 

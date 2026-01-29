@@ -1,5 +1,5 @@
-import React from "react";
-import { StyleSheet, View, Image } from "react-native";
+import React, { useRef } from "react";
+import { StyleSheet, View, Image, Animated } from "react-native";
 import { Text, Card, useTheme, Surface } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { shadows } from "../lib/theme";
@@ -16,6 +16,24 @@ interface AuctionCardProps {
 export function AuctionCard({ title, currentBid, timeLeft, imageUrl, onPress }: AuctionCardProps) {
     const theme = useTheme();
 
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.95,
+            useNativeDriver: true,
+            speed: 20,
+        }).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            speed: 20,
+        }).start();
+    };
+
     const formattedBid = new Intl.NumberFormat("id-ID", {
         style: "currency",
         currency: "IDR",
@@ -23,31 +41,38 @@ export function AuctionCard({ title, currentBid, timeLeft, imageUrl, onPress }: 
     }).format(currentBid);
 
     return (
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }, shadows.shadowCard]} onPress={onPress}>
-            <View>
-                <Image source={{ uri: imageUrl }} style={styles.image} />
-                <Surface style={[styles.badge, { backgroundColor: theme.colors.error }]} elevation={2}>
-                    <Text variant="labelSmall" style={styles.badgeText}>LIVE</Text>
-                </Surface>
-            </View>
-            <Card.Content style={styles.content}>
-                <Text variant="bodyMedium" numberOfLines={2} style={styles.title}>
-                    {title}
-                </Text>
-                <View style={styles.bidInfo}>
-                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>Current Bid</Text>
-                    <Text variant="titleMedium" style={{ color: theme.colors.primary, fontWeight: "bold" }}>
-                        {formattedBid}
-                    </Text>
+        <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
+            <Card
+                style={[styles.card, { backgroundColor: theme.colors.surface }, shadows.shadowCard]}
+                onPress={onPress}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+            >
+                <View>
+                    <Image source={{ uri: imageUrl }} style={styles.image} />
+                    <Surface style={[styles.badge, { backgroundColor: theme.colors.error }]} elevation={2}>
+                        <Text variant="labelSmall" style={styles.badgeText}>LIVE</Text>
+                    </Surface>
                 </View>
-                <View style={[styles.timeContainer, { backgroundColor: theme.colors.secondaryContainer }]}>
-                    <MaterialCommunityIcons name="clock-outline" size={14} color={theme.colors.onSecondaryContainer} />
-                    <Text variant="labelSmall" style={{ color: theme.colors.onSecondaryContainer, marginLeft: 4 }}>
-                        {timeLeft}
+                <Card.Content style={styles.content}>
+                    <Text variant="bodyMedium" numberOfLines={2} style={styles.title}>
+                        {title}
                     </Text>
-                </View>
-            </Card.Content>
-        </Card>
+                    <View style={styles.bidInfo}>
+                        <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>Current Bid</Text>
+                        <Text variant="titleMedium" style={{ color: theme.colors.primary, fontWeight: "bold" }}>
+                            {formattedBid}
+                        </Text>
+                    </View>
+                    <View style={[styles.timeContainer, { backgroundColor: theme.colors.secondaryContainer }]}>
+                        <MaterialCommunityIcons name="clock-outline" size={14} color={theme.colors.onSecondaryContainer} />
+                        <Text variant="labelSmall" style={{ color: theme.colors.onSecondaryContainer, marginLeft: 4 }}>
+                            {timeLeft}
+                        </Text>
+                    </View>
+                </Card.Content>
+            </Card>
+        </Animated.View >
     );
 }
 
