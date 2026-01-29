@@ -1,68 +1,127 @@
 "use client";
 
 import { MotionValue, motion, useSpring, useTransform, useInView } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 
-type PlaceValue = number | ".";
+/**
+ * COUNTER COMPONENT (Mechanical/Briefcase Style)
+ * Supports Light/Dark mode with silver/dark metallic look.
+ */
 
-interface NumberProps {
-    mv: MotionValue<number>;
-    number: number;
-    height: number;
+interface CounterProps {
+    value: number;
+    direction?: "up" | "down";
+    fontSize?: number;
+    padding?: number;
+    gap?: number;
+    borderRadius?: number;
+    horizontalPadding?: number;
+    textColor?: string;
+    fontWeight?: string;
+    containerStyle?: React.CSSProperties;
+    counterStyle?: React.CSSProperties;
+    digitStyle?: React.CSSProperties;
+    places?: number[];
 }
 
-function Number({ mv, number, height }: NumberProps) {
-    const y = useTransform(mv, (latest) => {
-        const placeValue = latest % 10;
-        const offset = (10 + number - placeValue) % 10;
-        let memo = offset * height;
-        if (offset > 5) {
-            memo -= 10 * height;
-        }
-        return memo;
-    });
+const defaultContainerStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+};
 
-    const baseStyle: React.CSSProperties = {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-    };
+const defaultCounterStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+};
 
-    return <motion.span style={{ ...baseStyle, y }}>{number}</motion.span>;
+export default function Counter({
+    value,
+    fontSize = 100,
+    padding = 0,
+    gap = 8, // Tighter gap for lock mechanism
+    borderRadius = 8,
+    horizontalPadding = 8,
+    textColor = "inherit",
+    fontWeight = "inherit",
+    containerStyle,
+    counterStyle,
+    digitStyle,
+}: CounterProps) {
+    const { height } = useFontHeight(fontSize);
+    const ref = useRef<HTMLSpanElement>(null);
+    const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+    return (
+        <span ref={ref} style={{ ...defaultContainerStyle, ...containerStyle }}>
+            <span style={{ ...defaultCounterStyle, ...counterStyle, gap }}>
+                {String(value).split("").map((digitStr, i) => {
+                    const place = Math.pow(10, String(value).length - 1 - i);
+                    return (
+                        <div key={i} className="relative group perspective-500">
+                            {/* Mechanical Lock / Briefcase Style Container */}
+                            <div
+                                className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700/50 rounded-xl shadow-[0_4px_10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_10px_rgba(0,0,0,0.3)] overflow-hidden flex items-center justify-center relative transform transition-transform duration-300 hover:scale-105"
+                                style={{
+                                    height: height * 1.3,
+                                    width: (fontSize || 100) * 0.8,
+                                    boxShadow: "inset 0 0 20px rgba(0,0,0,0.05)"
+                                }}
+                            >
+                                {/* Cylinder Highlights - Top Sheen */}
+                                <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white to-transparent pointer-events-none z-20 opacity-50 dark:opacity-10" />
+
+                                {/* Cylinder Highlights - Bottom Shadow */}
+                                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/20 to-transparent pointer-events-none z-20 dark:from-black/80" />
+
+                                {/* Metallic edge highlights */}
+                                <div className="absolute inset-x-0 top-0 h-[1px] bg-white/80 dark:bg-white/10 z-30" />
+                                <div className="absolute inset-x-0 bottom-0 h-[1px] bg-black/10 dark:bg-black/80 z-30" />
+
+                                {/* Inner Content - The Number Wheel */}
+                                <div className="z-10 text-zinc-800 dark:text-white font-mono font-bold tracking-tighter" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
+                                    <Digit
+                                        place={place}
+                                        value={value}
+                                        height={height}
+                                        digitStyle={{
+                                            ...digitStyle,
+                                            height: height,
+                                            width: "100%",
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            fontVariantNumeric: "tabular-nums"
+                                        }}
+                                        shouldAnimate={isInView}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </span>
+        </span>
+    );
 }
 
-interface DigitProps {
-    place: PlaceValue;
+function Digit({
+    place,
+    value,
+    height,
+    digitStyle,
+    shouldAnimate,
+}: {
+    place: number;
     value: number;
     height: number;
     digitStyle?: React.CSSProperties;
-    shouldAnimate: boolean; // Receive trigger
-}
-
-function Digit({ place, value, height, digitStyle, shouldAnimate }: DigitProps) {
-    // Decimal point digit
-    if (place === ".") {
-        return (
-            <span
-                className="relative inline-flex items-center justify-center"
-                style={{ height, width: "fit-content", ...digitStyle }}
-            >
-                .
-            </span>
-        );
-    }
-
-    // Numeric digit
-    const valueRoundedToPlace = Math.floor(value / place);
-
-    // Start spring from 0
-    const animatedValue = useSpring(0, {
-        bounce: 0,
-        duration: 2000 // Adjust duration/spring physics if needed. using default physics or duration based if provided.
-        // Let's use default spring physics but maybe stiffer? Or just rely on default.
-        // motion/react useSpring takes (initial, config). Config can be duration/bounce.
+    shouldAnimate: boolean;
+}) {
+    let valueRoundedToPlace = Math.floor(value / place);
+    let animatedValue = useSpring(0, {
+        stiffness: 50,
+        damping: 15,
+        mass: 0.8,
     });
 
     useEffect(() => {
@@ -71,140 +130,22 @@ function Digit({ place, value, height, digitStyle, shouldAnimate }: DigitProps) 
         }
     }, [animatedValue, valueRoundedToPlace, shouldAnimate]);
 
-    const defaultStyle: React.CSSProperties = {
-        height,
-        position: "relative",
-        width: "1ch",
-        fontVariantNumeric: "tabular-nums",
-    };
-
     return (
-        <span
-            className="relative inline-flex overflow-hidden"
-            style={{ ...defaultStyle, ...digitStyle }}
-        >
-            {Array.from({ length: 10 }, (_, i) => (
-                <Number key={i} mv={animatedValue} number={i} height={height} />
-            ))}
-        </span>
-    );
-}
-
-interface CounterProps {
-    value: number;
-    fontSize?: number;
-    padding?: number;
-    places?: PlaceValue[];
-    gap?: number;
-    borderRadius?: number;
-    horizontalPadding?: number;
-    textColor?: string;
-    fontWeight?: React.CSSProperties["fontWeight"];
-    containerStyle?: React.CSSProperties;
-    counterStyle?: React.CSSProperties;
-    digitStyle?: React.CSSProperties;
-    gradientHeight?: number;
-    gradientFrom?: string;
-    gradientTo?: string;
-    topGradientStyle?: React.CSSProperties;
-    bottomGradientStyle?: React.CSSProperties;
-}
-
-export default function Counter({
-    value,
-    fontSize = 100,
-    padding = 0,
-    places = [...value.toString()].map((ch, i, a) => {
-        if (ch === ".") {
-            return ".";
-        }
-
-        const dotIndex = a.indexOf(".");
-        const isInteger = dotIndex === -1;
-
-        const exponent = isInteger
-            ? a.length - i - 1
-            : i < dotIndex
-                ? dotIndex - i - 1
-                : -(i - dotIndex);
-
-        return 10 ** exponent;
-    }),
-    gap = 8,
-    borderRadius = 4,
-    horizontalPadding = 8,
-    textColor = "inherit",
-    fontWeight = "inherit",
-    containerStyle,
-    counterStyle,
-    digitStyle,
-    gradientHeight = 16,
-    gradientFrom = "transparent", // Changed from "black" to avoid dark bars in light mode
-    gradientTo = "transparent",
-    topGradientStyle,
-    bottomGradientStyle,
-}: CounterProps) {
-    const height = fontSize + padding;
-
-    // Use Intersection Observer (useInView)
-    const ref = useRef(null);
-    const isInView = useInView(ref, { once: true, margin: "-50px" });
-
-    const defaultContainerStyle: React.CSSProperties = {
-        position: "relative",
-        display: "inline-block",
-    };
-
-    const defaultCounterStyle: React.CSSProperties = {
-        fontSize,
-        display: "flex",
-        gap,
-        overflow: "hidden",
-        borderRadius,
-        paddingLeft: horizontalPadding,
-        paddingRight: horizontalPadding,
-        lineHeight: 1,
-        color: textColor,
-        fontWeight,
-    };
-
-    const gradientContainerStyle: React.CSSProperties = {
-        pointerEvents: "none",
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-    };
-
-    const defaultTopGradientStyle: React.CSSProperties = {
-        height: gradientHeight,
-        background: `linear-gradient(to bottom, ${gradientFrom}, ${gradientTo})`,
-    };
-
-    const defaultBottomGradientStyle: React.CSSProperties = {
-        height: gradientHeight,
-        background: `linear-gradient(to top, ${gradientFrom}, ${gradientTo})`,
-    };
-
-    return (
-        <span ref={ref} style={{ ...defaultContainerStyle, ...containerStyle }}>
-            <span style={{ ...defaultCounterStyle, ...counterStyle }}>
-                {places.map((place) => (
-                    <Digit
-                        key={place}
-                        place={place}
-                        value={value}
-                        height={height}
-                        digitStyle={digitStyle}
-                        shouldAnimate={isInView}
-                    />
+        <div style={{ height, position: "relative", overflow: "hidden" }}>
+            <motion.div style={{ y: useTransform(animatedValue, (v) => -1 * (v % 10) * height) }}>
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((i, index) => ( // Extra 0 for smooth loop if needed, though %10 handles it mostly
+                    <div key={index} style={{ ...digitStyle, height, fontSize: height * 0.8, lineHeight: `${height}px` }}>
+                        {i}
+                    </div>
                 ))}
-            </span>
-            <span style={gradientContainerStyle}>
-                <span style={topGradientStyle ?? defaultTopGradientStyle} />
-                <span style={bottomGradientStyle ?? defaultBottomGradientStyle} />
-            </span>
-        </span>
+            </motion.div>
+        </div>
     );
+}
+
+// Hook to measure font height
+function useFontHeight(fontSize: number) {
+    // For specific fonts or generic usage, we can approximate or measure.
+    // Here we approximate based on fontSize
+    return { height: fontSize };
 }

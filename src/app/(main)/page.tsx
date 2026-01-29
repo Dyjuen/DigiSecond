@@ -9,42 +9,137 @@ import Counter from "@/components/ui/Counter";
 import { Footer } from "@/components/layout/Footer";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import { motion } from "motion/react";
+import { useTheme } from "next-themes";
+import { useState, useEffect } from "react";
+
+import { ThreeDCarousel } from "@/components/ui/ThreeDCarousel";
+import { Marquee } from "@/components/sections/marquee";
+import Image from "next/image";
+
+// Game Logos
+import mobileLegendsLogo from "@/assets/images/Mobile-legends-logo.svg.png";
+import freeFireLogo from "@/assets/images/FREE_FIRE_LOGO.PNG_WHITE.png";
+import pubgLogo from "@/assets/images/PUBG_Corporation_Logo.svg.png";
+import genshinLogo from "@/assets/images/Genshin_Impact_logo.svg.png";
+import valorantLogo from "@/assets/images/Valorant_logo_-_pink_color_version.svg.png";
+import robloxLogo from "@/assets/images/Roblox_logo_2017.svg.png";
+
+// Payment Logos
+import bcaLogo from "@/assets/images/bank-central-asia-(bca)-logo.svg";
+import mandiriLogo from "@/assets/images/bank-mandiri-logo.svg";
+import bniLogo from "@/assets/images/bank-negara-indonesia-(bni)-logo.svg";
+import briLogo from "@/assets/images/bank-rakyat-indonesia-(bri)-logo.svg";
+import gopayLogo from "@/assets/images/gopay-logo.svg";
+import ovoLogo from "@/assets/images/Logo_ovo_purple.svg.png";
+import danaLogo from "@/assets/images/dana-logo.svg";
+import shopeepayLogo from "@/assets/images/shopeepay-logo.svg";
+import qrisLogo from "@/assets/images/Logo_QRIS.svg.png";
+import visaLogo from "@/assets/images/Visa_Inc._logo.svg.png";
+import mastercardLogo from "@/assets/images/mclogo-for-footer.svg";
+import alfamartLogo from "@/assets/images/Alfamart_logo.svg.png";
+import indomaretLogo from "@/assets/images/Indomaret.svg.png";
+import bsiLogo from "@/assets/images/Bank_Syariah_Indonesia.svg.png";
 
 const popularGames = [
-    { name: "Mobile Legends", icon: "🎮" },
-    { name: "Free Fire", icon: "🔥" },
-    { name: "PUBG Mobile", icon: "🎯" },
-    { name: "Genshin Impact", icon: "⚔️" },
-    { name: "Valorant", icon: "💥" },
-    { name: "Roblox", icon: "🧱" },
+    { name: "Mobile Legends", logo: mobileLegendsLogo, href: "mobile-legends" },
+    { name: "Free Fire", logo: freeFireLogo, href: "free-fire" },
+    { name: "PUBG Mobile", logo: pubgLogo, href: "pubg-mobile" },
+    { name: "Genshin Impact", logo: genshinLogo, href: "genshin-impact" },
+    { name: "Valorant", logo: valorantLogo, href: "valorant" },
+    { name: "Roblox", logo: robloxLogo, href: "roblox" },
 ];
 
 export default function HomePage() {
+    const { theme, resolvedTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    // Prevent hydration mismatch by waiting for client mount
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Prepare carousel items (Doubled for balance)
+    // 12 items (6x2) fits better than 18, preventing overcrowding
+    const carouselItems = [...popularGames, ...popularGames].map((game, i) => (
+        <Link key={`${game.name}-${i}`} href={`/listings?category=${game.href}`} className="block w-full h-full group relative perspective-500" draggable={false}>
+            {/* Main Card Container - Purple/Black/White theme only */}
+            <div className="w-[200px] h-[260px] rounded-3xl relative overflow-hidden transition-all duration-500 group-hover:-translate-y-2 bg-white dark:bg-[#0f0f15] border border-brand-primary/30 group-hover:border-brand-primary shadow-lg group-hover:shadow-[0_0_30px_rgba(99,102,241,0.4)]">
+
+                {/* Background Gradient - Purple only */}
+                <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-brand-primary/10 group-hover:from-brand-primary/10 group-hover:to-brand-primary/20 transition-all duration-500" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.2),transparent)] opacity-50" />
+
+                {/* Content Container */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
+
+                    {/* Icon with Glow */}
+                    <div className="relative mb-6">
+                        <div className="absolute inset-0 bg-brand-primary blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
+                        <div className="relative bg-zinc-100 dark:bg-[#1a1a23] p-4 rounded-2xl border border-brand-primary/30 group-hover:border-brand-primary backdrop-blur-md shadow-xl group-hover:scale-105 transition-all duration-500 w-24 h-24 flex items-center justify-center">
+                            <div className="relative w-full h-full p-1">
+                                <Image
+                                    src={game.logo}
+                                    alt={game.name}
+                                    fill
+                                    className="object-contain"
+                                    sizes="96px"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight group-hover:text-brand-primary transition-colors duration-300">
+                        {game.name}
+                    </h3>
+
+                    {/* Divider */}
+                    <div className="h-px w-12 bg-gradient-to-r from-transparent via-brand-primary/50 to-transparent mb-4 group-hover:w-24 transition-all duration-500" />
+
+                    {/* Action Button */}
+                    <div className="px-4 py-2 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-xs font-semibold text-brand-primary group-hover:bg-brand-primary group-hover:text-white transition-all duration-300">
+                        Lihat Akun
+                    </div>
+                </div>
+
+                {/* Shine Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none" />
+            </div>
+        </Link>
+    ));
+
     return (
         <main className="min-h-screen bg-zinc-50 dark:bg-black relative selection:bg-brand-primary selection:text-white">
             <Navbar />
 
-            {/* GLOBAL AURORA BACKGROUND */}
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-                <div className="dark:hidden w-full h-full opacity-30">
-                    <Aurora
-                        colorStops={["#e0e7ff", "#f5f3ff", "#e0e7ff"]}
-                        blend={0.4}
-                        amplitude={0.8}
-                        speed={0.3}
-                        className="w-full h-full scale-110"
-                    />
+            {/* GLOBAL AURORA BACKGROUND - Only render after mount to prevent hydration mismatch */}
+            {mounted && (
+                <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+                    {resolvedTheme === "light" ? (
+                        <div className="w-full h-full opacity-60">
+                            <Aurora
+                                key="light-aurora"
+                                colorStops={["#6366f1", "#a5b4fc", "#c7d2fe"]}
+                                blend={0.5}
+                                amplitude={1.0}
+                                speed={0.3}
+                                className="w-full h-full scale-110"
+                            />
+                        </div>
+                    ) : (
+                        <div className="w-full h-full opacity-50">
+                            <Aurora
+                                key="dark-aurora"
+                                colorStops={["#6366f1", "#a5b4fc", "#6366f1"]}
+                                blend={0.6}
+                                amplitude={1.2}
+                                speed={0.5}
+                                className="w-full h-full scale-110"
+                            />
+                        </div>
+                    )}
                 </div>
-                <div className="hidden dark:block w-full h-full opacity-50">
-                    <Aurora
-                        colorStops={["#6366f1", "#a5b4fc", "#6366f1"]}
-                        blend={0.6}
-                        amplitude={1.2}
-                        speed={0.5}
-                        className="w-full h-full scale-110"
-                    />
-                </div>
-            </div>
+            )}
 
             {/* Hero Section */}
             <div className="relative z-10">
@@ -237,30 +332,50 @@ export default function HomePage() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        {popularGames.map((game) => (
-                            <Link key={game.name} href={`/listings?category=${game.name.toLowerCase().replace(" ", "-")}`}>
-                                <GlowCard
-                                    className="w-full !aspect-[3/4] group cursor-pointer"
-                                    glowColor="purple"
-                                    customSize={true}
-                                >
-                                    <div className="absolute inset-0 bg-zinc-800/50 flex items-center justify-center">
-                                        {/* Placeholder Icon */}
-                                        <div className="text-6xl opacity-30 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
-                                            {game.icon}
-                                        </div>
-                                    </div>
-
-                                    <div className="relative z-10 translate-y-8 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                        <h3 className="text-lg font-bold text-white mb-2 text-center drop-shadow-lg leading-tight">{game.name}</h3>
-                                        <div className="h-1 w-8 bg-brand-primary mx-auto rounded-full"></div>
-                                    </div>
-                                </GlowCard>
-                            </Link>
-                        ))}
+                    {/* Constrained container for better perspective precision */}
+                    <div className="w-full max-w-7xl mx-auto">
+                        <ThreeDCarousel items={carouselItems} radius={650} autoPlaySpeed={0.08} itemWidth={220} itemHeight={280} />
                     </div>
                 </div>
+            </section>
+
+            {/* Partners Marquee Section */}
+            <section className="py-10 relative z-10 border-t border-zinc-800/50 bg-zinc-950/30 backdrop-blur-sm overflow-hidden">
+                <div className="container mx-auto px-6 mb-8 text-center">
+                    <p className="text-sm font-semibold text-zinc-500 uppercase tracking-widest">
+                        Mitra Pembayaran & Game Resmi
+                    </p>
+                </div>
+
+                <Marquee className="[--gap:3rem] py-6 [mask-image:linear-gradient(to_right,transparent,white_5%,white_95%,transparent)]" pauseOnHover speed={40}>
+                    {[
+                        { name: "BCA", logo: bcaLogo },
+                        { name: "Mandiri", logo: mandiriLogo },
+                        { name: "BNI", logo: bniLogo },
+                        { name: "BRI", logo: briLogo },
+                        { name: "BSI", logo: bsiLogo },
+                        { name: "GoPay", logo: gopayLogo },
+                        { name: "OVO", logo: ovoLogo },
+                        { name: "Dana", logo: danaLogo },
+                        { name: "ShopeePay", logo: shopeepayLogo },
+                        { name: "QRIS", logo: qrisLogo },
+                        { name: "Alfamart", logo: alfamartLogo },
+                        { name: "Indomaret", logo: indomaretLogo },
+                        { name: "Visa", logo: visaLogo },
+                        { name: "Mastercard", logo: mastercardLogo },
+                    ].map((partner) => (
+                        <div key={partner.name} className="group flex items-center gap-2 px-6 py-3 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:border-brand-primary hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all duration-300 cursor-default h-16 min-w-[140px] justify-center">
+                            <div className="relative h-8 w-28">
+                                <Image
+                                    src={partner.logo}
+                                    alt={partner.name}
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                        </div>
+                    ))}
+                </Marquee>
             </section>
 
             {/* CTA Section */}
@@ -302,29 +417,41 @@ export default function HomePage() {
                                 </div>
                             </div>
 
-                            {/* Stats Counters - Simplified */}
-                            <div className="lg:w-1/2 w-full grid grid-cols-2 gap-8 lg:pl-12 border-t lg:border-t-0 lg:border-l border-zinc-800 pt-8 lg:pt-0">
-                                <div>
-                                    <div className="text-zinc-500 text-sm font-medium mb-1">Total Transaksi</div>
-                                    <div className="flex items-baseline text-4xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                                        <span className="text-brand-primary text-2xl mr-1">Rp</span>
-                                        <Counter value={134} fontSize={40} padding={0} gap={2} />
-                                        <span className="text-zinc-500 text-xl ml-1">M+</span>
+                            {/* Stats Counters - Horizontal Layout */}
+                            <div className="flex flex-wrap justify-center lg:justify-end gap-12">
+                                <div className="flex flex-col items-center">
+                                    <div className="flex items-end gap-2 text-zinc-900 dark:text-white">
+                                        <span className="text-3xl font-bold mb-4">Rp</span>
+                                        <Counter
+                                            value={134}
+                                            fontSize={120}
+                                            textColor="inherit"
+                                        />
+                                        <span className="text-3xl font-bold mb-4">M+</span>
                                     </div>
+                                    <p className="text-sm text-zinc-500 mt-1">Total Transaksi</p>
                                 </div>
-                                <div>
-                                    <div className="text-zinc-500 text-sm font-medium mb-1">Active Users</div>
-                                    <div className="flex items-baseline text-4xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                                        <Counter value={15} fontSize={40} padding={0} gap={2} />
-                                        <span className="text-zinc-500 text-xl ml-1">RB+</span>
+                                <div className="flex flex-col items-center">
+                                    <div className="flex items-end gap-2 text-zinc-900 dark:text-white">
+                                        <Counter
+                                            value={15}
+                                            fontSize={120}
+                                            textColor="inherit"
+                                        />
+                                        <span className="text-3xl font-bold mb-4">RB+</span>
                                     </div>
+                                    <p className="text-sm text-zinc-500 mt-1">Active Users</p>
                                 </div>
-                                <div className="col-span-2">
-                                    <div className="text-zinc-500 text-sm font-medium mb-1">Games Supported</div>
-                                    <div className="flex items-baseline text-5xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                                        <Counter value={50} fontSize={48} padding={0} gap={3} textColor="currentColor" />
-                                        <span className="text-brand-primary text-3xl ml-1">+</span>
+                                <div className="flex flex-col items-center">
+                                    <div className="flex items-end gap-2 text-zinc-900 dark:text-white">
+                                        <Counter
+                                            value={50}
+                                            fontSize={120}
+                                            textColor="inherit"
+                                        />
+                                        <span className="text-3xl font-bold mb-4">+</span>
                                     </div>
+                                    <p className="text-sm text-zinc-500 mt-1">Games Supported</p>
                                 </div>
                             </div>
                         </div>

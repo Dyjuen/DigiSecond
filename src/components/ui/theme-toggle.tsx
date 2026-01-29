@@ -1,39 +1,28 @@
 "use client";
 
 import * as React from "react";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
-    const [theme, setTheme] = React.useState<"light" | "dark">("dark");
+    const { theme, setTheme, resolvedTheme } = useTheme();
     const [mounted, setMounted] = React.useState(false);
 
-    // Get initial theme from localStorage or system preference
+    // Ensure we're mounted to prevent hydration mismatch
     React.useEffect(() => {
         setMounted(true);
-        const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-        if (savedTheme) {
-            setTheme(savedTheme);
-            document.documentElement.classList.toggle("dark", savedTheme === "dark");
-        } else {
-            // Default to dark for this app
-            setTheme("dark");
-            document.documentElement.classList.add("dark");
-        }
     }, []);
 
     const toggleTheme = () => {
-        const newTheme = theme === "dark" ? "light" : "dark";
-        setTheme(newTheme);
-        localStorage.setItem("theme", newTheme);
-        document.documentElement.classList.toggle("dark", newTheme === "dark");
+        setTheme(resolvedTheme === "dark" ? "light" : "dark");
     };
 
-    // Prevent hydration mismatch
+    // Prevent hydration mismatch - show placeholder until mounted
     if (!mounted) {
         return (
             <button
                 className={cn(
-                    "p-2 rounded-lg bg-zinc-800 text-zinc-400",
+                    "p-2 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-400",
                     className
                 )}
                 aria-label="Toggle theme"
@@ -43,19 +32,21 @@ export function ThemeToggle({ className }: { className?: string }) {
         );
     }
 
+    const isDark = resolvedTheme === "dark";
+
     return (
         <button
             onClick={toggleTheme}
             className={cn(
                 "p-2 rounded-lg transition-colors",
-                theme === "dark"
+                isDark
                     ? "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
                     : "bg-zinc-200 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-300",
                 className
             )}
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
         >
-            {theme === "dark" ? (
+            {isDark ? (
                 // Sun icon for switching to light mode
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -79,3 +70,4 @@ export function ThemeToggle({ className }: { className?: string }) {
         </button>
     );
 }
+

@@ -4,6 +4,9 @@ import "~/styles/globals.css";
 import { Footer } from "@/components/layout/Footer";
 import { CursorProvider, Cursor, CursorFollow } from "@/components/ui/custom-cursor";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { Toaster } from "sonner"; // Added Toaster
+import { TRPCReactProvider } from "@/trpc/react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -51,14 +54,19 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="id" className={inter.variable}>
+        <html lang="id" className={inter.variable} suppressHydrationWarning>
             <body className="min-h-screen bg-white antialiased dark:bg-gray-900 overflow-x-hidden">
                 <AuthProvider>
-                    <CursorProvider>
-                        <Cursor />
-                        <CursorFollow>Buyer</CursorFollow>
-                        {children}
-                    </CursorProvider>
+                    <TRPCReactProvider>
+                        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+                            <CursorProvider>
+                                <Cursor />
+                                <CursorFollow>Buyer</CursorFollow>
+                                <Toaster position="top-center" richColors />
+                                {children}
+                            </CursorProvider>
+                        </ThemeProvider>
+                    </TRPCReactProvider>
                 </AuthProvider>
             </body>
         </html>

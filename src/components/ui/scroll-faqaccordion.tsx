@@ -25,16 +25,7 @@ export default function ChatFAQAccordion({
     const [value, setValue] = React.useState<string | undefined>(undefined);
 
     return (
-        <div className={cn("max-w-3xl mx-auto py-16 px-4", className)}>
-            <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold mb-4 text-zinc-900 dark:text-white">
-                    Frequently Asked Questions
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                    Temukan jawaban seputar DigiSecond disini (Click to chat!)
-                </p>
-            </div>
-
+        <div className={cn("max-w-3xl mx-auto w-full", className)}>
             <Accordion.Root
                 type="single"
                 collapsible

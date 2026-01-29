@@ -43,13 +43,13 @@ export const CursorFollow = ({
         const handleMouseEnter = () => setIsVisible(true);
 
         window.addEventListener("mousemove", moveCursor);
-        document.addEventListener("mouseleave", handleMouseLeave);
-        document.addEventListener("mouseenter", handleMouseEnter);
+        document.body.addEventListener("mouseleave", handleMouseLeave);
+        document.body.addEventListener("mouseenter", handleMouseEnter);
 
         return () => {
             window.removeEventListener("mousemove", moveCursor);
-            document.removeEventListener("mouseleave", handleMouseLeave);
-            document.removeEventListener("mouseenter", handleMouseEnter);
+            document.body.removeEventListener("mouseleave", handleMouseLeave);
+            document.body.removeEventListener("mouseenter", handleMouseEnter);
         };
     }, [cursorX, cursorY]);
 
