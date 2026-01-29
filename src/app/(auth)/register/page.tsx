@@ -23,14 +23,57 @@ const GlassInputWrapper = ({ children }: { children: React.ReactNode }) => (
 // import { AppleIcon, FacebookIcon, GoogleIcon } from '@/components/ui/social-icons'; // Assuming these are available or defined locally if created previously. If not, I will define them here for safety or import.
 // Checking previous turn, I created 'src/components/ui/social-icons.tsx'.
 
-import { AppleIcon, FacebookIcon, GoogleIcon } from '@/components/ui/social-icons';
+import { GoogleIcon } from '@/components/ui/social-icons';
+
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
-    const [showPassword, setShowPassword] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [showPassword, setShowPassword] = useState(false); // Kept to avoid breaking imports if any, but unused
+    const [email, setEmail] = useState("");
+    const [name, setName] = useState("");
+    const [loading, setLoading] = useState(false);
+    const router = useRouter();
 
-    const handleRegister = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleGoogleLogin = async () => {
+        setLoading(true);
+        try {
+            await signIn("google", { callbackUrl: "/dashboard" });
+        } catch (error) {
+            console.error(error);
+            setLoading(false);
+        }
+    };
+
+    const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        // Handle Register Logic
+        setLoading(true);
+        const loadingToast = toast.loading("Memproses pendaftaran...");
+
+        // Note: For Magic Link, Name is not natively passed. 
+        // Real implementation would save name to DB after verify or use a custom credential provider.
+        // For now, we proceed with Email sign in.
+        try {
+            const result = await signIn("email", { email, callbackUrl: "/dashboard", redirect: false });
+            if (result?.error) {
+                toast.dismiss(loadingToast);
+                toast.error("Gagal mengirim email pendaftaran.");
+            } else {
+                toast.dismiss(loadingToast);
+                toast.success("Link pendaftaran dikirim! Periksa email anda.", {
+                    duration: 5000,
+                    description: "Silakan klik link yang dikirim ke email anda."
+                });
+            }
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            console.error(error);
+            toast.error("Terjadi kesalahan.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -38,52 +81,54 @@ export default function RegisterPage() {
             {/* Left column: Form Area (approx 30-35%) */}
             <section className="w-full lg:w-[35%] flex items-center justify-center p-8 lg:p-12 z-20 relative bg-[#09090b] lg:rounded-r-[3rem] shadow-[10px_0_30px_-5px_rgba(0,0,0,0.5)] border-r border-zinc-800">
                 <div className="w-full max-w-sm">
-                    <div className="flex flex-col gap-6">
-                        <div>
-                            <h1 className="text-5xl font-extrabold leading-tight tracking-tight mb-2">
-                                Buat <span className="text-indigo-500">Akun</span>
-                            </h1>
-                            <p className="text-zinc-400 font-medium">
-                                Gabung komunitas dan mulai perjalananmu.
-                            </p>
-                        </div>
+                    <div className="flex flex-col gap-8">
+                        <h1 className="text-5xl font-bold leading-tight tracking-tight">
+                            Buat <span className="text-indigo-500">Akun</span>
+                        </h1>
+                        <p className="text-zinc-400 font-medium">
+                            Gabung komunitas dan mulai perjalananmu.
+                        </p>
 
                         <form className="space-y-5" onSubmit={handleRegister}>
                             <div>
                                 <label className="text-sm font-bold text-zinc-300 mb-1.5 block">Nama Lengkap</label>
                                 <GlassInputWrapper>
-                                    <input name="name" type="text" placeholder="Masukkan nama lengkap" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none placeholder:text-zinc-600 text-white font-medium" />
+                                    <input
+                                        name="name"
+                                        type="text"
+                                        placeholder="Masukkan nama lengkap"
+                                        className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none placeholder:text-zinc-600 text-white font-medium"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                    />
                                 </GlassInputWrapper>
                             </div>
 
                             <div>
                                 <label className="text-sm font-bold text-zinc-300 mb-1.5 block">Alamat Email</label>
                                 <GlassInputWrapper>
-                                    <input name="email" type="email" placeholder="Masukkan email anda" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none placeholder:text-zinc-600 text-white font-medium" />
+                                    <input
+                                        name="email"
+                                        type="email"
+                                        placeholder="Masukkan email anda"
+                                        className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none placeholder:text-zinc-600 text-white font-medium"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
                                 </GlassInputWrapper>
                             </div>
 
-                            <div>
-                                <label className="text-sm font-bold text-zinc-300 mb-1.5 block">Kata Sandi</label>
-                                <GlassInputWrapper>
-                                    <div className="relative">
-                                        <input name="password" type={showPassword ? 'text' : 'password'} placeholder="Buat kata sandi" className="w-full bg-transparent text-sm p-4 pr-12 rounded-2xl focus:outline-none placeholder:text-zinc-600 text-white font-medium" />
-                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-3 flex items-center">
-                                            {showPassword ? <EyeOff className="w-5 h-5 text-zinc-500 hover:text-zinc-300 transition-colors" /> : <Eye className="w-5 h-5 text-zinc-500 hover:text-zinc-300 transition-colors" />}
-                                        </button>
-                                    </div>
-                                </GlassInputWrapper>
-                            </div>
+                            {/* Password removed for Passwordless Auth */}
 
                             <div className="flex items-start gap-3 text-sm">
-                                <input type="checkbox" name="terms" className="mt-1 rounded border-zinc-700 bg-zinc-800 text-indigo-500 focus:ring-indigo-500 font-medium" />
+                                <input type="checkbox" name="terms" className="mt-1 rounded border-zinc-700 bg-zinc-800 text-indigo-500 focus:ring-indigo-500 font-medium" required />
                                 <span className="text-zinc-400 font-medium">
                                     Saya menyetujui <Link href="/terms" className="text-indigo-500 hover:underline font-bold">Syarat & Ketentuan</Link> dan <Link href="/privacy" className="text-indigo-500 hover:underline font-bold">Kebijakan Privasi</Link>
                                 </span>
                             </div>
 
-                            <button type="submit" className="w-full rounded-2xl bg-indigo-600 py-4 font-bold text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20 text-base">
-                                Daftar Sekarang
+                            <button type="submit" disabled={loading} className="w-full rounded-2xl bg-indigo-600 py-4 font-bold text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20 text-base disabled:opacity-50">
+                                {loading ? "Memproses..." : "Daftar (Magic Link)"}
                             </button>
                         </form>
 
@@ -93,17 +138,9 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="flex flex-col gap-3">
-                            <button type="button" className="w-full flex items-center justify-center gap-3 border border-zinc-800 rounded-2xl py-3 hover:bg-zinc-800 transition-colors bg-zinc-900/50">
+                            <button type="button" onClick={handleGoogleLogin} disabled={loading} className="w-full flex items-center justify-center gap-3 border border-zinc-800 rounded-2xl py-3 hover:bg-zinc-800 transition-colors bg-zinc-900/50">
                                 <GoogleIcon />
                                 <span className="text-zinc-300 font-bold">Google</span>
-                            </button>
-                            <button type="button" className="w-full flex items-center justify-center gap-3 border border-zinc-800 rounded-2xl py-3 hover:bg-zinc-800 transition-colors bg-zinc-900/50">
-                                <AppleIcon />
-                                <span className="text-zinc-300 font-bold">Apple ID</span>
-                            </button>
-                            <button type="button" className="w-full flex items-center justify-center gap-3 border border-zinc-800 rounded-2xl py-3 hover:bg-zinc-800 transition-colors bg-zinc-900/50">
-                                <FacebookIcon />
-                                <span className="text-zinc-300 font-bold">Facebook</span>
                             </button>
                         </div>
 
