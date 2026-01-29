@@ -22,12 +22,14 @@ model User {
   phone          String?
   name           String
   avatar_url     String?
+  id_card_url    String?   // KYC ID Card Image URL
   password_hash  String?
   role           UserRole  @default(BUYER)
   rating         Float     @default(0)
   rating_count   Int       @default(0)
   is_verified    Boolean   @default(false)
   is_suspended   Boolean   @default(false)
+  tier           UserTier  @default(FREE)
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
 
@@ -55,6 +57,12 @@ enum UserRole {
   BUYER
   SELLER
   ADMIN
+}
+
+enum UserTier {
+  FREE
+  PRO
+  ENTERPRISE
 }
 
 /// Account: OAuth provider accounts untuk NextAuth.js
@@ -202,6 +210,7 @@ enum ListingType {
 
 enum ListingStatus {
   DRAFT
+  PENDING
   ACTIVE
   SOLD
   CANCELLED

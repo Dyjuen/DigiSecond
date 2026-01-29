@@ -40,6 +40,39 @@ export const userRouter = createTRPCRouter({
         }),
 
     /**
+     * Update own profile (including KYC data)
+     */
+    update: protectedProcedure
+        .input(
+            z.object({
+                name: z.string().min(2).optional(),
+                phone: z.string().regex(/^\d{11,13}$/, "Nomor HP harus 11-13 angka").optional(),
+                id_card_url: z.string().url().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const user = await ctx.db.user.update({
+                where: { user_id: ctx.session.user.id },
+                data: input,
+            });
+            return user;
+        }),
+
+    /**
+     * Upgrade Plan User
+     */
+    upgradeTier: protectedProcedure
+        .input(z.object({
+            tier: z.enum(["FREE", "PRO", "ENTERPRISE"])
+        }))
+        .mutation(async ({ ctx, input }) => {
+            return ctx.db.user.update({
+                where: { user_id: ctx.session.user.id },
+                data: { tier: input.tier }
+            });
+        }),
+
+    /**
      * Akses Admin buat cari User
      */
     search: adminProcedure
