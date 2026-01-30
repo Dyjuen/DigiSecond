@@ -22,6 +22,7 @@ interface CounterProps {
     counterStyle?: React.CSSProperties;
     digitStyle?: React.CSSProperties;
     places?: number[];
+    className?: string;
 }
 
 const defaultContainerStyle: React.CSSProperties = {
@@ -46,13 +47,14 @@ export default function Counter({
     containerStyle,
     counterStyle,
     digitStyle,
+    className,
 }: CounterProps) {
     const { height } = useFontHeight(fontSize);
     const ref = useRef<HTMLSpanElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <span ref={ref} style={{ ...defaultContainerStyle, ...containerStyle }}>
+        <span ref={ref} style={{ ...defaultContainerStyle, ...containerStyle }} className={className}>
             <span style={{ ...defaultCounterStyle, ...counterStyle, gap }}>
                 {String(value).split("").map((digitStr, i) => {
                     const place = Math.pow(10, String(value).length - 1 - i);

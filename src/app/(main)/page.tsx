@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 
 import { ThreeDCarousel } from "@/components/ui/ThreeDCarousel";
 import { Marquee } from "@/components/sections/marquee";
+import { FeaturedListings } from "@/components/sections/featured-listings";
 import Image from "next/image";
 
 // Game Logos
@@ -339,6 +340,22 @@ export default function HomePage() {
                 </div>
             </section>
 
+            {/* Featured Listings - Mobile Legends */}
+            <FeaturedListings
+                categorySlug="mobile-legends"
+                title="Akun Sultan Mobile Legends"
+                subtitle="Koleksi skin legend, collector, dan rank mythic terbaik."
+                limit={4}
+            />
+
+            {/* Featured Listings - Free Fire */}
+            <FeaturedListings
+                categorySlug="free-fire"
+                title="Free Fire Sultan"
+                subtitle="Akun old, bundle langka, dan senjata evo level max."
+                limit={4}
+            />
+
             {/* Partners Marquee Section */}
             <section className="py-10 relative z-10 border-t border-zinc-800/50 bg-zinc-950/30 backdrop-blur-sm overflow-hidden">
                 <div className="container mx-auto px-6 mb-8 text-center">
@@ -418,40 +435,40 @@ export default function HomePage() {
                             </div>
 
                             {/* Stats Counters - Horizontal Layout */}
-                            <div className="flex flex-wrap justify-center lg:justify-end gap-12">
+                            <div className="flex flex-wrap justify-center lg:justify-end gap-4 md:gap-10">
                                 <div className="flex flex-col items-center">
                                     <div className="flex items-end gap-2 text-zinc-900 dark:text-white">
-                                        <span className="text-3xl font-bold mb-4">Rp</span>
+                                        <span className="text-2xl md:text-3xl font-bold mb-3 md:mb-4">Rp</span>
                                         <Counter
                                             value={134}
-                                            fontSize={120}
+                                            fontSize={50}
                                             textColor="inherit"
                                         />
-                                        <span className="text-3xl font-bold mb-4">M+</span>
+                                        <span className="text-2xl md:text-3xl font-bold mb-3 md:mb-4">M+</span>
                                     </div>
-                                    <p className="text-sm text-zinc-500 mt-1">Total Transaksi</p>
+                                    <p className="text-xs md:text-sm text-zinc-500 mt-1">Total Transaksi</p>
                                 </div>
                                 <div className="flex flex-col items-center">
                                     <div className="flex items-end gap-2 text-zinc-900 dark:text-white">
                                         <Counter
                                             value={15}
-                                            fontSize={120}
+                                            fontSize={50}
                                             textColor="inherit"
                                         />
-                                        <span className="text-3xl font-bold mb-4">RB+</span>
+                                        <span className="text-2xl md:text-3xl font-bold mb-3 md:mb-4">RB+</span>
                                     </div>
-                                    <p className="text-sm text-zinc-500 mt-1">Active Users</p>
+                                    <p className="text-xs md:text-sm text-zinc-500 mt-1">Active Users</p>
                                 </div>
                                 <div className="flex flex-col items-center">
                                     <div className="flex items-end gap-2 text-zinc-900 dark:text-white">
                                         <Counter
                                             value={50}
-                                            fontSize={120}
+                                            fontSize={50}
                                             textColor="inherit"
                                         />
-                                        <span className="text-3xl font-bold mb-4">+</span>
+                                        <span className="text-2xl md:text-3xl font-bold mb-3 md:mb-4">+</span>
                                     </div>
-                                    <p className="text-sm text-zinc-500 mt-1">Games Supported</p>
+                                    <p className="text-xs md:text-sm text-zinc-500 mt-1">Games Supported</p>
                                 </div>
                             </div>
                         </div>
