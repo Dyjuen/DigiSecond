@@ -27,6 +27,7 @@ export function CustomPrismaAdapter(prisma: PrismaClient): Adapter {
                 role: created.role,
                 verified: created.is_verified,
                 suspended: created.is_suspended,
+                tier: created.tier,
             };
         },
 
@@ -44,6 +45,7 @@ export function CustomPrismaAdapter(prisma: PrismaClient): Adapter {
                 role: user.role,
                 verified: user.is_verified,
                 suspended: user.is_suspended,
+                tier: user.tier,
             };
         },
 
@@ -61,6 +63,7 @@ export function CustomPrismaAdapter(prisma: PrismaClient): Adapter {
                 role: user.role,
                 verified: user.is_verified,
                 suspended: user.is_suspended,
+                tier: user.tier,
             };
         },
 
@@ -85,6 +88,7 @@ export function CustomPrismaAdapter(prisma: PrismaClient): Adapter {
                 role: user.role,
                 verified: user.is_verified,
                 suspended: user.is_suspended,
+                tier: user.tier,
             };
         },
 
@@ -107,6 +111,7 @@ export function CustomPrismaAdapter(prisma: PrismaClient): Adapter {
                 role: updated.role,
                 verified: updated.is_verified,
                 suspended: updated.is_suspended,
+                tier: updated.tier,
             };
         },
 
@@ -182,6 +187,7 @@ export function CustomPrismaAdapter(prisma: PrismaClient): Adapter {
                     role: user.role,
                     verified: user.is_verified,
                     suspended: user.is_suspended,
+                    tier: user.tier,
                 },
             };
         },
