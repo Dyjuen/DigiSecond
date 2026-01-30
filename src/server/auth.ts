@@ -212,8 +212,9 @@ export const authOptions: NextAuthOptions = {
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             const transport = nodemailer.createTransport(transportConfig as any);
 
-                            const text = `Sign in to ${host}\n\n${url}\n\n`;
-                            const html = `<p>Sign in to <strong>${host}</strong></p><p><a href="${url}">Click here to sign in</a></p>`;
+
+                            const text = `Sign in to ${host}\n${url}\n\n`;
+                            const html = verificationEmailHtml({ url, host, theme: { color: "#6366f1" } });
 
                             console.log(`[Email] Attempting to send magic link to ${identifier} from ${provider.from}`);
 
@@ -251,6 +252,59 @@ export const authOptions: NextAuthOptions = {
         return list;
     })(),
 };
+
+/**
+ * Email HTML Template
+ */
+function verificationEmailHtml(params: { url: string; host: string; theme: { color: string } }) {
+    const { url, host, theme } = params;
+    const brandColor = theme.color || "#6366f1";
+
+    return `
+<body style="background: #09090b; font-family: sans-serif; padding: 20px;">
+  <table width="100%" border="0" cellspacing="20" cellpadding="0" style="background: #09090b; max-width: 600px; margin: auto; border-radius: 10px;">
+    <tr>
+      <td align="center" style="padding: 10px 0px 0px 0px; font-size: 22px; font-family: Helvetica, Arial, sans-serif; color: #ffffff;">
+        <strong>DigiSecond</strong>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <table border="0" cellspacing="0" cellpadding="0" style="background: #18181b; border: 1px solid #27272a; border-radius: 16px; width: 100%; overflow: hidden;">
+            <tr>
+                <td align="center" style="padding: 40px 20px;">
+                    <h2 style="color: #ffffff; margin-bottom: 24px; font-size: 22px; font-weight: 600;">Sign in to DigiSecond</h2>
+                    <p style="color: #a1a1aa; font-size: 15px; line-height: 24px; margin-bottom: 32px;">
+                        We received a request to access your account. Click the button below to sign in securely.
+                    </p>
+                    <table border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td align="center" style="border-radius: 12px;" bgcolor="${brandColor}">
+                                <a href="${url}" target="_blank" style="font-size: 16px; font-family: Helvetica, Arial, sans-serif; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; border: 1px solid ${brandColor}; display: inline-block; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);">
+                                    Sign In
+                                </a>
+                            </td>
+                        </tr>
+                    </table>
+                    <p style="color: #52525b; font-size: 13px; margin-top: 40px;">
+                        If you did not request this email, you can safely ignore it.
+                    </p>
+                </td>
+            </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding: 0px 0px 10px 0px; font-size: 12px; line-height: 22px; font-family: Helvetica, Arial, sans-serif; color: #52525b;">
+        If you have trouble clicking the button, copy and paste this URL into your browser:
+        <br />
+        <a href="${url}" style="color: #71717a; text-decoration: none;">${url.replace(/https?:\/\//, '')}</a>
+      </td>
+    </tr>
+  </table>
+</body>
+`;
+}
 
 /**
  * Wrapper for getServerSession for use in RSC
