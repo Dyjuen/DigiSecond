@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { TransactionChat } from "@/components/chat/TransactionChat";
 import { Countdown } from "@/components/ui/countdown";
+import { toast } from "sonner";
 
 // Game Logos
 import mobileLegendsLogo from "@/assets/images/Mobile-legends-logo.svg.png";
@@ -254,10 +255,22 @@ export default function ListingDetailPage() {
                                             <div className="relative">
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">Rp</span>
                                                 <input
-                                                    type="number"
+                                                    type="text"
                                                     placeholder={`Min. ${((listing.current_bid || listing.starting_bid || 0) + (listing.bid_increment || 10000)).toLocaleString("id-ID")}`}
-                                                    value={bidAmount}
-                                                    onChange={(e) => setBidAmount(e.target.value)}
+                                                    value={bidAmount ? Number(bidAmount).toLocaleString("id-ID") : ""}
+                                                    onChange={(e) => {
+                                                        const rawValue = e.target.value.replace(/\D/g, "");
+                                                        const numericValue = Number(rawValue);
+
+                                                        if (numericValue > 2000000000) {
+                                                            toast.error("Maksimal penawaran adalah Rp 2.000.000.000");
+                                                            // Optional: cap the value or just don't update
+                                                            // For better UX, we just don't update the state beyond the limit
+                                                            return;
+                                                        }
+
+                                                        setBidAmount(rawValue);
+                                                    }}
                                                     className="w-full pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-brand-primary outline-none transition-all"
                                                 />
                                             </div>

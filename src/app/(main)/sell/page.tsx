@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -177,11 +177,29 @@ export default function SellPage() {
                             <label className="block text-sm font-medium text-zinc-900 dark:text-white mb-2">
                                 Harga (IDR) *
                             </label>
-                            <input
-                                type="number"
-                                {...form.register("price")}
-                                placeholder="10000"
-                                className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            <Controller
+                                control={form.control}
+                                name="price"
+                                render={({ field: { onChange, value, ...field } }) => (
+                                    <input
+                                        {...field}
+                                        type="text"
+                                        placeholder="10000"
+                                        value={value ? Number(value).toLocaleString("id-ID") : ""}
+                                        onChange={(e) => {
+                                            const rawValue = e.target.value.replace(/\D/g, "");
+                                            const numericValue = Number(rawValue);
+
+                                            if (numericValue > 2000000000) {
+                                                toast.error("Harga maksimal adalah Rp 2.000.000.000");
+                                                return;
+                                            }
+
+                                            onChange(rawValue === "" ? "" : numericValue);
+                                        }}
+                                        className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                )}
                             />
                             {form.formState.errors.price && (
                                 <p className="text-xs text-red-500 mt-1">{form.formState.errors.price.message}</p>

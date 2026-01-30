@@ -173,11 +173,11 @@ export default function LoginPage() {
                                 type="submit"
                                 disabled={loading}
                                 className={`w-full rounded-2xl py-4 font-bold text-white transition-colors shadow-lg text-base disabled:opacity-50 disabled:cursor-not-allowed ${isAdminMode
-                                        ? "bg-red-600 hover:bg-red-700 shadow-red-600/20"
-                                        : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20"
+                                    ? "bg-red-600 hover:bg-red-700 shadow-red-600/20"
+                                    : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20"
                                     }`}
                             >
-                                {loading ? "Memproses..." : isAdminMode ? "Masuk sebagai Admin" : "Masuk dengan Email (Magic Link)"}
+                                {loading ? "Memproses..." : isAdminMode ? "Masuk sebagai Admin" : "Masuk"}
                             </button>
                         </form>
 

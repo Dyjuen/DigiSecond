@@ -62,7 +62,7 @@ export default function RootLayout({
                             <CursorProvider>
                                 <Cursor />
                                 <CursorFollow>Buyer</CursorFollow>
-                                <Toaster position="top-center" richColors />
+                                <Toaster position="top-right" richColors closeButton />
                                 {children}
                             </CursorProvider>
                         </ThemeProvider>

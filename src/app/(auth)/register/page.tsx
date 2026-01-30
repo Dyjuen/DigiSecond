@@ -128,7 +128,7 @@ export default function RegisterPage() {
                             </div>
 
                             <button type="submit" disabled={loading} className="w-full rounded-2xl bg-indigo-600 py-4 font-bold text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20 text-base disabled:opacity-50">
-                                {loading ? "Memproses..." : "Daftar (Magic Link)"}
+                                {loading ? "Memproses..." : "Daftar"}
                             </button>
                         </form>
 

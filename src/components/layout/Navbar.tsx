@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import Image from "next/image";
 import logoImage from "@/assets/icons/logotrans.png";
 import { useSession, signOut } from "next-auth/react";
+import { SearchOverlay } from "@/components/layout/SearchOverlay";
 
 interface NavItem {
     label: string;
@@ -275,6 +276,7 @@ export function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const pathname = usePathname();
     const { data: session, status } = useSession();
+    const [isSearchOpen, setIsSearchOpen] = React.useState(false);
 
     // Only show auth-dependent content after initial load to prevent hydration mismatch
     const isLoading = status === "loading";
@@ -359,8 +361,10 @@ export function Navbar() {
                         {/* Theme toggle */}
                         <ThemeToggle />
 
+
                         {/* Search button */}
                         <button
+                            onClick={() => setIsSearchOpen(true)}
                             className="p-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                             aria-label="Search"
                         >
@@ -368,6 +372,8 @@ export function Navbar() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </button>
+
+
 
                         <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800" />
 
@@ -416,14 +422,16 @@ export function Navbar() {
                         </div>
                     </button>
                 </div>
-            </nav>
+            </nav >
 
             {/* Mobile Menu */}
-            <div
-                className={cn(
-                    "md:hidden overflow-hidden transition-all duration-300 ease-in-out",
-                    isMobileMenuOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
-                )}
+            < div
+                className={
+                    cn(
+                        "md:hidden overflow-hidden transition-all duration-300 ease-in-out",
+                        isMobileMenuOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
+                    )
+                }
             >
                 <div className="px-6 py-4 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-200 dark:border-zinc-800/50">
                     {/* Mobile Search */}
@@ -491,7 +499,8 @@ export function Navbar() {
                         )}
                     </div>
                 </div>
-            </div>
-        </header >
+            </div >
+            <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+        </header>
     );
 }

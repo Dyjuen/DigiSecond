@@ -58,6 +58,16 @@ function ListingsContent() {
     const categoryFilter = searchParams.get("category");
     const [searchQuery, setSearchQuery] = useState("");
 
+    // Initialize search query from URL
+    useEffect(() => {
+        const searchFromUrl = searchParams.get("search");
+        if (searchFromUrl) {
+            setSearchQuery(searchFromUrl);
+        } else {
+            setSearchQuery("");
+        }
+    }, [searchParams]);
+
     // Fetch listings using tRPC
     const { data, isLoading } = api.listing.getAll.useQuery({
         type: typeFilter === "all" ? undefined : (typeFilter === "fixed" ? "FIXED" : "AUCTION"),
@@ -73,6 +83,8 @@ function ListingsContent() {
         else params.set("type", type);
         router.push(`/listings?${params.toString()}`);
     };
+
+    const popularSuggestions = ["Mobile Legends", "Free Fire", "PUBG Mobile", "Genshin Impact", "Valorant"];
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-12 relative overflow-hidden">
@@ -342,13 +354,35 @@ function ListingsContent() {
                         <div className="text-center py-20 bg-zinc-100 dark:bg-zinc-900/30 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800">
                             <span className="text-4xl block mb-4">🔍</span>
                             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Tidak ada listing ditemukan</h3>
-                            <p className="text-zinc-500">Coba ubah filter atau kata kunci pencarian Anda.</p>
+                            <p className="text-zinc-500 mb-6">Coba ubah filter atau kata kunci pencarian Anda.</p>
+
+                            {searchQuery && (
+                                <div className="mb-6">
+                                    <p className="text-sm text-zinc-500 mb-3">Mungkin maksud Anda:</p>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {popularSuggestions.map(term => (
+                                            <button
+                                                key={term}
+                                                onClick={() => {
+                                                    setSearchQuery(term);
+                                                    router.push(`/listings?search=${encodeURIComponent(term)}`);
+                                                }}
+                                                className="px-4 py-1.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full text-sm hover:border-brand-primary transition-colors"
+                                            >
+                                                {term}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <button
                                 onClick={() => {
                                     handleTypeChange("all");
                                     setSearchQuery("");
+                                    router.push("/listings");
                                 }}
-                                className="mt-6 px-6 py-2 bg-brand-primary text-white rounded-xl font-medium hover:bg-brand-primary-dark transition-colors"
+                                className="px-6 py-2 bg-brand-primary text-white rounded-xl font-medium hover:bg-brand-primary-dark transition-colors"
                             >
                                 Reset Filter
                             </button>
