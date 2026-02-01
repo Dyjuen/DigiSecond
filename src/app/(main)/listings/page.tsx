@@ -10,7 +10,6 @@ import { Countdown } from "@/components/ui/countdown";
 import { api } from "@/trpc/react";
 import { Aurora } from "@/components/effects/Aurora";
 
-// Game Logos
 import mobileLegendsLogo from "@/assets/images/Mobile-legends-logo.svg.png";
 import freeFireLogo from "@/assets/images/FREE_FIRE_LOGO.PNG_WHITE.png";
 import pubgLogo from "@/assets/images/PUBG_Corporation_Logo.svg.png";
@@ -21,7 +20,6 @@ import steamLogo from "@/assets/images/Steam_icon_logo.svg.png";
 import playstationLogo from "@/assets/images/Playstation_logo_colour.svg.png";
 import nintendoLogo from "@/assets/images/Nintendo_red_logo.svg.png";
 
-// Logo map for rendering
 const logoMap: Record<string, any> = {
     "Mobile Legends": mobileLegendsLogo,
     "Free Fire": freeFireLogo,
@@ -34,18 +32,18 @@ const logoMap: Record<string, any> = {
     "Nintendo": nintendoLogo,
 };
 
-// Categories for UI filtering (Static for now, matches DB seed)
+// Categories for UI filtering (Sudah terintegrasi database)
 const categories = [
-    { name: "Mobile Legends", count: 1234, slug: "mobile-legends", logo: mobileLegendsLogo },
-    { name: "Free Fire", count: 892, slug: "free-fire", logo: freeFireLogo },
-    { name: "PUBG Mobile", count: 756, slug: "pubg-mobile", logo: pubgLogo },
-    { name: "Genshin Impact", count: 543, slug: "genshin-impact", logo: genshinLogo },
-    { name: "Valorant", count: 421, slug: "valorant", logo: valorantLogo },
-    { name: "Roblox", count: 389, slug: "roblox", logo: robloxLogo },
-    { name: "Steam", count: 234, slug: "steam", logo: steamLogo },
-    { name: "PlayStation", count: 189, slug: "playstation", logo: playstationLogo },
-    { name: "Nintendo", count: 145, slug: "nintendo", logo: nintendoLogo },
-    { name: "Lainnya", count: 312, slug: "other", logo: null },
+    { name: "Mobile Legends", slug: "mobile-legends", logo: mobileLegendsLogo },
+    { name: "Free Fire", slug: "free-fire", logo: freeFireLogo },
+    { name: "PUBG Mobile", slug: "pubg-mobile", logo: pubgLogo },
+    { name: "Genshin Impact", slug: "genshin-impact", logo: genshinLogo },
+    { name: "Valorant", slug: "valorant", logo: valorantLogo },
+    { name: "Roblox", slug: "roblox", logo: robloxLogo },
+    { name: "Steam", slug: "steam", logo: steamLogo },
+    { name: "PlayStation", slug: "playstation", logo: playstationLogo },
+    { name: "Nintendo", slug: "nintendo", logo: nintendoLogo },
+    { name: "Lainnya", slug: "other", logo: null },
 ];
 
 import { useTheme } from "next-themes";
@@ -56,23 +54,44 @@ function ListingsContent() {
     const router = useRouter();
     const typeFilter = searchParams.get("type") || "all";
     const categoryFilter = searchParams.get("category");
+    const sortFilter = searchParams.get("sort") || "newest";
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
 
-    // Initialize search query from URL
+    // Search query dari URL
     useEffect(() => {
         const searchFromUrl = searchParams.get("search");
         if (searchFromUrl) {
             setSearchQuery(searchFromUrl);
+            setDebouncedSearch(searchFromUrl);
         } else {
             setSearchQuery("");
+            setDebouncedSearch("");
         }
     }, [searchParams]);
 
-    // Fetch listings using tRPC
+    // Debounce
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Map sort values to API format
+    const sortByMap: Record<string, "newest" | "price_asc" | "price_desc"> = {
+        latest: "newest",
+        newest: "newest",
+        price_asc: "price_asc",
+        price_desc: "price_desc",
+    };
+
+    // Fetch listings using tRPC with all filters
     const { data, isLoading } = api.listing.getAll.useQuery({
         type: typeFilter === "all" ? undefined : (typeFilter === "fixed" ? "FIXED" : "AUCTION"),
         category: categoryFilter || undefined,
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
+        sortBy: sortByMap[sortFilter] || "newest",
     });
 
     const listings = data?.listings || [];
@@ -152,14 +171,34 @@ function ListingsContent() {
                             params.set("sort", e.target.value);
                             router.push(`/listings?${params.toString()}`);
                         }}
-                        className="pointer-events-auto h-12 px-4 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-white focus:outline-none focus:border-brand-primary appearance-none cursor-pointer"
-                        defaultValue={searchParams.get("sort") || "latest"}
+                        className="pointer-events-auto h-12 px-4 pr-10 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-white focus:outline-none focus:border-brand-primary appearance-none cursor-pointer"
+                        value={sortFilter}
                     >
-                        <option value="latest">Urutkan: Terbaru</option>
+                        <option value="newest">Urutkan: Terbaru</option>
                         <option value="price_asc">Harga: Terendah</option>
                         <option value="price_desc">Harga: Tertinggi</option>
                     </select>
                 </div>
+
+                {/* Active Filter Badge - Show when category is selected */}
+                {categoryFilter && (
+                    <div className="mb-6 flex items-center gap-2">
+                        <span className="text-sm text-zinc-500">Filter aktif:</span>
+                        <button
+                            onClick={() => {
+                                const params = new URLSearchParams(searchParams);
+                                params.delete("category");
+                                router.push(`/listings?${params.toString()}`);
+                            }}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-primary/10 border border-brand-primary/20 rounded-full text-brand-primary text-sm font-medium hover:bg-brand-primary/20 transition-colors"
+                        >
+                            {categories.find(c => c.slug === categoryFilter)?.name || categoryFilter}
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                )}
 
                 {/* Categories - Only show if no category filter active */}
                 {!categoryFilter && (
@@ -195,7 +234,6 @@ function ListingsContent() {
                                         )}
                                     </div>
                                     <p className="font-medium text-zinc-900 dark:text-white text-xs">{cat.name}</p>
-                                    <p className="text-[10px] text-zinc-500">{cat.count.toLocaleString()}</p>
                                 </Link>
                             ))}
                         </div>
