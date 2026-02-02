@@ -57,7 +57,56 @@ body {
 body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Base transitions for all elements for overall smoothness */
+*,
+*::before,
+*::after {
+  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+/* View Transitions API Animations */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Smooth cross-fade for the whole page */
+::view-transition-old(root) {
+  animation: fade-out 0.8s ease-out forwards;
+}
+
+::view-transition-new(root) {
+  animation: fade-in 0.8s ease-in forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/* Skip transition for heavy elements or animations if needed */
+.no-transition,
+.no-transition * {
+  transition: none !important;
 }
 
 a {
@@ -70,6 +119,7 @@ a {
    =========================================== */
 
 @layer components {
+
   /* Buttons */
   .btn {
     @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
@@ -127,6 +177,7 @@ a {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
