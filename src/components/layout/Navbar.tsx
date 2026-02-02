@@ -320,7 +320,7 @@ export function Navbar() {
 
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2 group">
-                        <div className="relative w-32 h-10 md:w-40 md:h-12 transition-transform group-hover:scale-105">
+                        <div className="relative w-32 h-10 md:w-40 md:h-12 transition-transform">
                             <Image
                                 src={logoImage}
                                 alt="DigiSecond Logo"

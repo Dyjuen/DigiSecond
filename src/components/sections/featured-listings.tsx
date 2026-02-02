@@ -32,7 +32,7 @@ const logoMap: Record<string, any> = {
 };
 
 interface FeaturedListingsProps {
-    categorySlug: string;
+    categorySlug?: string;
     title: string;
     subtitle?: string;
     limit?: number;
@@ -40,7 +40,7 @@ interface FeaturedListingsProps {
 
 export function FeaturedListings({ categorySlug, title, subtitle, limit = 4 }: FeaturedListingsProps) {
     const { data, isLoading } = api.listing.getAll.useQuery({
-        category: categorySlug,
+        category: categorySlug || undefined,
         limit: limit,
     });
 

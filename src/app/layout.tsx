@@ -59,12 +59,8 @@ export default function RootLayout({
                 <AuthProvider>
                     <TRPCReactProvider>
                         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
-                            <CursorProvider>
-                                <Cursor />
-                                <CursorFollow>Buyer</CursorFollow>
-                                <Toaster position="top-right" richColors closeButton />
-                                {children}
-                            </CursorProvider>
+                            <Toaster position="top-right" richColors closeButton />
+                            {children}
                         </ThemeProvider>
                     </TRPCReactProvider>
                 </AuthProvider>

@@ -12,7 +12,7 @@ import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
 
-import { ThreeDCarousel } from "@/components/ui/ThreeDCarousel";
+
 import { Marquee } from "@/components/sections/marquee";
 import { FeaturedListings } from "@/components/sections/featured-listings";
 import Image from "next/image";
@@ -24,6 +24,9 @@ import pubgLogo from "@/assets/images/PUBG_Corporation_Logo.svg.png";
 import genshinLogo from "@/assets/images/Genshin_Impact_logo.svg.png";
 import valorantLogo from "@/assets/images/Valorant_logo_-_pink_color_version.svg.png";
 import robloxLogo from "@/assets/images/Roblox_logo_2017.svg.png";
+import steamLogo from "@/assets/images/Steam_icon_logo.svg.png";
+import playstationLogo from "@/assets/images/Playstation_logo_colour.svg.png";
+import nintendoLogo from "@/assets/images/Nintendo_red_logo.svg.png";
 
 // Payment Logos
 import bcaLogo from "@/assets/images/bank-central-asia-(bca)-logo.svg";
@@ -48,6 +51,9 @@ const popularGames = [
     { name: "Genshin Impact", logo: genshinLogo, href: "genshin-impact" },
     { name: "Valorant", logo: valorantLogo, href: "valorant" },
     { name: "Roblox", logo: robloxLogo, href: "roblox" },
+    { name: "Steam", logo: steamLogo, href: "steam" },
+    { name: "PlayStation", logo: playstationLogo, href: "playstation" },
+    { name: "Nintendo", logo: nintendoLogo, href: "nintendo" },
 ];
 
 export default function HomePage() {
@@ -59,55 +65,7 @@ export default function HomePage() {
         setMounted(true);
     }, []);
 
-    // Prepare carousel items (Doubled for balance)
-    // 12 items (6x2) fits better than 18, preventing overcrowding
-    const carouselItems = [...popularGames, ...popularGames].map((game, i) => (
-        <Link key={`${game.name}-${i}`} href={`/listings?category=${game.href}`} className="block w-full h-full group relative perspective-500" draggable={false}>
-            {/* Main Card Container - Purple/Black/White theme only */}
-            <div className="w-[200px] h-[260px] rounded-3xl relative overflow-hidden transition-all duration-500 group-hover:-translate-y-2 bg-white dark:bg-[#0f0f15] border border-brand-primary/30 group-hover:border-brand-primary shadow-lg group-hover:shadow-[0_0_30px_rgba(99,102,241,0.4)]">
 
-                {/* Background Gradient - Purple only */}
-                <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-brand-primary/10 group-hover:from-brand-primary/10 group-hover:to-brand-primary/20 transition-all duration-500" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.2),transparent)] opacity-50" />
-
-                {/* Content Container */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
-
-                    {/* Icon with Glow */}
-                    <div className="relative mb-6">
-                        <div className="absolute inset-0 bg-brand-primary blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
-                        <div className="relative bg-zinc-100 dark:bg-[#1a1a23] p-4 rounded-2xl border border-brand-primary/30 group-hover:border-brand-primary backdrop-blur-md shadow-xl group-hover:scale-105 transition-all duration-500 w-24 h-24 flex items-center justify-center">
-                            <div className="relative w-full h-full p-1">
-                                <Image
-                                    src={game.logo}
-                                    alt={game.name}
-                                    fill
-                                    className="object-contain"
-                                    sizes="96px"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight group-hover:text-brand-primary transition-colors duration-300">
-                        {game.name}
-                    </h3>
-
-                    {/* Divider */}
-                    <div className="h-px w-12 bg-gradient-to-r from-transparent via-brand-primary/50 to-transparent mb-4 group-hover:w-24 transition-all duration-500" />
-
-                    {/* Action Button */}
-                    <div className="px-4 py-2 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-xs font-semibold text-brand-primary group-hover:bg-brand-primary group-hover:text-white transition-all duration-300">
-                        Lihat Akun
-                    </div>
-                </div>
-
-                {/* Shine Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none" />
-            </div>
-        </Link>
-    ));
 
     return (
         <main className="min-h-screen bg-zinc-50 dark:bg-black relative selection:bg-brand-primary selection:text-white">
@@ -325,17 +283,76 @@ export default function HomePage() {
             <section className="py-20 lg:py-32 relative z-10">
                 <div className="container mx-auto px-6">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl lg:text-4xl font-bold text-zinc-900 dark:text-white">
-                            Game Populer
-                        </h2>
-                        <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
-                            Temukan akun dan item dari game favoritmu
-                        </p>
+                        <motion.h2
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            className="text-3xl lg:text-5xl font-black text-zinc-900 dark:text-white mb-4"
+                        >
+                            Kategori Populer
+                        </motion.h2>
+                        <motion.p
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.1 }}
+                            className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto"
+                        >
+                            Pilih platform favoritmu dan temukan penawaran terbaik dari ribuan seller terverifikasi.
+                        </motion.p>
                     </div>
 
-                    {/* Constrained container for better perspective precision */}
-                    <div className="w-full max-w-7xl mx-auto">
-                        <ThreeDCarousel items={carouselItems} radius={650} autoPlaySpeed={0.08} itemWidth={220} itemHeight={280} />
+                    <div className="flex flex-wrap justify-center gap-4 lg:gap-6">
+                        {popularGames.map((game, i) => (
+                            <motion.div
+                                key={game.name}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: i * 0.05 }}
+                                className="w-[calc(50%-1rem)] md:w-[calc(33.33%-1.5rem)] lg:w-[calc(20%-1.5rem)]"
+                            >
+                                <Link
+                                    href={`/listings?category=${game.href}`}
+                                    className="group relative block aspect-[4/5] overflow-hidden rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-brand-primary transition-all duration-500 shadow-sm hover:shadow-2xl hover:shadow-brand-primary/10 hover:-translate-y-2"
+                                >
+                                    {/* Card Content */}
+                                    <div className="absolute inset-0 p-6 flex flex-col items-center justify-between z-10">
+                                        {/* Status Badge */}
+                                        <div className="w-full flex justify-end">
+                                            <div className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest group-hover:border-brand-primary/30 group-hover:text-brand-primary transition-colors">
+                                                Active
+                                            </div>
+                                        </div>
+
+                                        {/* Logo */}
+                                        <div className="relative w-24 h-24 transform group-hover:scale-110 transition-transform duration-500 ease-out">
+                                            <div className="absolute inset-0 bg-brand-primary blur-2xl opacity-0 group-hover:opacity-20 transition-opacity" />
+                                            <Image
+                                                src={game.logo}
+                                                alt={game.name}
+                                                fill
+                                                className="object-contain drop-shadow-md"
+                                                sizes="(max-width: 768px) 96px, 120px"
+                                            />
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className="text-center">
+                                            <h3 className="text-base font-bold text-zinc-900 dark:text-white group-hover:text-brand-primary transition-colors">
+                                                {game.name}
+                                            </h3>
+                                            <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-tighter mt-1">
+                                                1200+ Listings
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Hover Background Accent */}
+                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-brand-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                </Link>
+                            </motion.div>
+                        ))}
                     </div>
                 </div>
             </section>
@@ -356,6 +373,15 @@ export default function HomePage() {
                 limit={4}
             />
 
+            {/* Latest Listings - All Categories */}
+            <FeaturedListings
+                title="Listing Terbaru"
+                subtitle="Jelajahi berbagai item dan akun digital terbaru di marketplace."
+                limit={4}
+            />
+
+
+
             {/* Partners Marquee Section */}
             <section className="py-10 relative z-10 border-t border-zinc-800/50 bg-zinc-950/30 backdrop-blur-sm overflow-hidden">
                 <div className="container mx-auto px-6 mb-8 text-center">
@@ -364,7 +390,7 @@ export default function HomePage() {
                     </p>
                 </div>
 
-                <Marquee className="[--gap:3rem] py-6 [mask-image:linear-gradient(to_right,transparent,white_5%,white_95%,transparent)]" pauseOnHover speed={40}>
+                <Marquee className="[--gap:3rem] py-6 [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]" pauseOnHover speed={40}>
                     {[
                         { name: "BCA", logo: bcaLogo },
                         { name: "Mandiri", logo: mandiriLogo },

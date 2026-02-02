@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Marquee } from "@/components/sections/marquee";
 import { Blur } from "@/components/sections/blur";
 import TrueFocus from "@/components/effects/TrueFocus";
+import { api } from "@/trpc/react";
 
 const gameCategories = [
     { name: "Mobile Legends", color: "bg-blue-600" },
@@ -30,14 +31,21 @@ const featuredListings = [
 export function HeroSection() {
     const [selectedListing, setSelectedListing] = React.useState(0);
 
+    // Fetch real listings for the hero section
+    const { data: listingsData, isLoading } = api.listing.getAll.useQuery({
+        limit: 5,
+    });
+
+    const listings = listingsData?.listings || [];
+
     return (
         <div className="min-h-screen pt-20 pb-12 px-4 sm:px-6 relative overflow-hidden bg-transparent">
             {/* Main hero container - CARD STYLE */}
             <div className="max-w-7xl mx-auto relative h-full">
-                <div className="relative border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl shadow-xl dark:shadow-2xl overflow-hidden bg-white/50 dark:bg-black/50 backdrop-blur-sm p-4 sm:p-8 md:p-12 lg:p-16">
+                <div className="relative border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl shadow-xl dark:shadow-2xl overflow-hidden bg-white/50 dark:bg-black/50 backdrop-blur-sm pt-4 sm:pt-8 md:pt-12 lg:pt-16 pb-0 px-4 sm:px-8 md:px-12 lg:px-16">
 
                     {/* Content */}
-                    <div className="relative z-10">
+                    <div className="relative z-10 pb-12 lg:pb-16">
                         {/* Badge */}
                         <div className="mb-4 sm:mb-6">
                             <Badge variant="secondary" className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm bg-zinc-100/50 dark:bg-zinc-900/50 backdrop-blur-sm border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100">
@@ -114,79 +122,97 @@ export function HeroSection() {
                                 </div>
                             </div>
 
-                            {/* Right - Featured Listing Card */}
-                            <Card className="shadow-2xl overflow-hidden border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md">
-                                <div className="p-4 sm:p-6 border-b border-zinc-100 dark:border-zinc-800">
-                                    <div className="flex items-center justify-between mb-3 sm:mb-4">
-                                        <CardTitle className="text-base sm:text-lg text-zinc-900 dark:text-white">Featured Listings</CardTitle>
-                                        <Badge variant="outline" className="text-[10px] sm:text-xs border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400">Live</Badge>
-                                    </div>
+                            <div className="relative group/card h-full">
+                                {isLoading ? (
+                                    <Card className="shadow-2xl overflow-hidden border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md h-[400px] flex items-center justify-center">
+                                        <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+                                    </Card>
+                                ) : listings.length > 0 ? (
+                                    <Card className="shadow-2xl overflow-hidden border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md hover:border-brand-primary/50 transition-all duration-300 h-full flex flex-col">
+                                        <div className="p-4 sm:p-6 border-b border-zinc-100 dark:border-zinc-800">
+                                            <div className="flex items-center justify-between mb-3 sm:mb-4">
+                                                <CardTitle className="text-base sm:text-lg text-zinc-900 dark:text-white">Featured Listings</CardTitle>
+                                                <Badge variant="outline" className="text-[10px] sm:text-xs border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400">Live</Badge>
+                                            </div>
 
-                                    {/* Listing tabs */}
-                                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-                                        {featuredListings.map((listing, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => setSelectedListing(idx)}
-                                                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${selectedListing === idx
-                                                    ? "bg-brand-primary text-white shadow-md shadow-brand-primary/20"
-                                                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                                                    }`}
-                                            >
-                                                {listing.game}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <CardContent className="p-4 sm:p-6">
-                                    <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
-                                        <Avatar
-                                            name={featuredListings[selectedListing].seller}
-                                            size="lg"
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-semibold text-zinc-900 dark:text-white text-sm sm:text-base truncate">
-                                                {featuredListings[selectedListing].seller}
-                                            </p>
-                                            <div className="flex items-center gap-0.5 text-amber-500">
-                                                {"★★★★★".split("").map((star, i) => (
-                                                    <span key={i} className="text-xs sm:text-sm">{star}</span>
+                                            {/* Listing tabs */}
+                                            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                                                {listings.map((listing, idx) => (
+                                                    <button
+                                                        key={listing.listing_id}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedListing(idx);
+                                                        }}
+                                                        className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${selectedListing === idx
+                                                            ? "bg-brand-primary text-white shadow-md shadow-brand-primary/20"
+                                                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                                                            }`}
+                                                    >
+                                                        {listing.game}
+                                                    </button>
                                                 ))}
-                                                <span className="text-[10px] sm:text-xs text-zinc-500 ml-1">(4.9)</span>
                                             </div>
                                         </div>
-                                        <Badge variant="success" className="text-[10px] sm:text-xs flex-shrink-0">Verified</Badge>
-                                    </div>
 
-                                    <CardTitle className="text-lg sm:text-xl mb-2 line-clamp-2 text-zinc-900 dark:text-white">
-                                        {featuredListings[selectedListing].title}
-                                    </CardTitle>
-                                    <CardDescription className="mb-4 text-xs sm:text-sm line-clamp-2 text-zinc-600 dark:text-zinc-400">
-                                        Akun premium dengan berbagai fitur eksklusif. Garansi 30 hari dan support penuh.
-                                    </CardDescription>
+                                        <CardContent className="p-4 sm:p-6 flex-1 flex flex-col">
+                                            <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
+                                                <Avatar
+                                                    name={listings[selectedListing].seller?.name || "Premium Seller"}
+                                                    size="lg"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-zinc-900 dark:text-white text-sm sm:text-base truncate">
+                                                        {listings[selectedListing].seller?.name || "Premium Seller"}
+                                                    </p>
+                                                    <div className="flex items-center gap-0.5 text-amber-500">
+                                                        {"★★★★★".split("").map((star, i) => (
+                                                            <span key={i} className="text-xs sm:text-sm">{star}</span>
+                                                        ))}
+                                                        <span className="text-[10px] sm:text-xs text-zinc-500 ml-1">(4.9)</span>
+                                                    </div>
+                                                </div>
+                                                <Badge variant="success" className="text-[10px] sm:text-xs flex-shrink-0">Verified</Badge>
+                                            </div>
 
-                                    <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                                        <div>
-                                            <p className="text-[10px] sm:text-xs text-zinc-500">Harga</p>
-                                            <p className="text-xl sm:text-2xl font-bold text-brand-primary">
-                                                {featuredListings[selectedListing].price}
-                                            </p>
-                                        </div>
-                                        <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9">
-                                            Lihat Detail
-                                            <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                            <Link href={`/listings/${listings[selectedListing].listing_id}`} className="group/title">
+                                                <CardTitle className="text-lg sm:text-xl mb-2 line-clamp-2 text-zinc-900 dark:text-white group-hover/title:text-brand-primary transition-colors">
+                                                    {listings[selectedListing].title}
+                                                </CardTitle>
+                                            </Link>
+                                            <CardDescription className="mb-4 text-xs sm:text-sm line-clamp-2 text-zinc-600 dark:text-zinc-400">
+                                                {listings[selectedListing].description || "Akun premium dengan berbagai fitur eksklusif. Garansi 30 hari dan support penuh."}
+                                            </CardDescription>
+
+                                            <div className="mt-auto flex items-center justify-between pt-3 sm:pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                                <div>
+                                                    <p className="text-[10px] sm:text-xs text-zinc-500">Harga</p>
+                                                    <p className="text-xl sm:text-2xl font-bold text-brand-primary">
+                                                        Rp {listings[selectedListing].price.toLocaleString("id-ID")}
+                                                    </p>
+                                                </div>
+                                                <Link href={`/listings/${listings[selectedListing].listing_id}`}>
+                                                    <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9">
+                                                        Lihat Detail
+                                                        <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                        </svg>
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ) : (
+                                    <Card className="shadow-2xl overflow-hidden border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md h-[400px] flex items-center justify-center">
+                                        <p className="text-zinc-500">No featured listings found.</p>
+                                    </Card>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Game Categories Marquee */}
-                    <div className="relative py-6 sm:py-10 w-full z-10 border-t border-zinc-200 dark:border-zinc-800/50">
+                    {/* Game Categories Marquee - INSIDE CONTAINER */}
+                    <div className="relative py-6 sm:py-10 w-full z-10 border-t border-zinc-200 dark:border-zinc-800/50 [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
                         <Marquee pauseOnHover speed={40} className="[--gap:1.5rem] py-4">
                             {gameCategories.map((category, index) => (
                                 <div
