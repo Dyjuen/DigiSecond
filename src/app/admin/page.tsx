@@ -103,7 +103,7 @@ export default function AdminDashboard() {
             icon: "⚖️",
             trend: dashboardStats?.openDisputes && dashboardStats.openDisputes > 0 ? "down" : "up"
         },
-    ];
+    ] as (typeof stats[0] & { href?: string })[];
 
     // Chart data
     const transactionChartData = {
