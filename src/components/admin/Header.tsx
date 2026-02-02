@@ -1,8 +1,16 @@
-"use client";
-
 import { useSession, signOut } from "next-auth/react";
 import { useSidebarContext } from "./SidebarContext";
 import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+    Menu,
+    Search,
+    Bell,
+    ChevronDown,
+    User,
+    LogOut,
+    Settings
+} from "lucide-react";
 
 export function EnhancedHeader() {
     const { data: session } = useSession();
@@ -10,123 +18,130 @@ export function EnhancedHeader() {
     const [showUserMenu, setShowUserMenu] = useState(false);
 
     return (
-        <header className="sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex h-16 items-center justify-between px-4 md:px-6">
+        <header className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5 shadow-sm">
+            <div className="flex h-16 items-center justify-between px-4 md:px-8">
                 {/* Left: Mobile Menu + Title */}
                 <div className="flex items-center gap-4">
                     <button
                         onClick={toggleSidebar}
-                        className="lg:hidden p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        className="lg:hidden p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors"
                     >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
+                        <Menu className="w-6 h-6 text-zinc-600 dark:text-zinc-400" />
                     </button>
 
                     <div className="hidden xl:block">
-                        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+                        <h2 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">
                             Admin Dashboard
                         </h2>
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                            DigiSecond Marketplace Control Panel
+                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">
+                            Control Panel • System Active
                         </p>
                     </div>
                 </div>
 
                 {/* Right: Search, Notifications, Theme, User */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                     {/* Search */}
-                    <div className="hidden md:block relative">
+                    <div className="hidden md:block relative group">
                         <input
                             type="search"
                             placeholder="Search..."
-                            className="w-64 px-4 py-2 pl-10 text-sm border border-zinc-300 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-72 px-5 py-2 pl-11 text-sm border-0 rounded-2xl bg-zinc-100 dark:bg-white/5 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all group-hover:bg-zinc-200/50 dark:group-hover:bg-white/10"
                         />
-                        <svg
-                            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <Search
+                            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-hover:text-indigo-500 transition-colors"
+                        />
                     </div>
 
                     {/* Notifications */}
-                    <button className="relative p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                        <svg className="w-6 h-6 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                        </svg>
-                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    <button className="relative p-2.5 rounded-2xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-all active:scale-95">
+                        <Bell className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-zinc-900"></span>
                     </button>
 
                     {/* User Menu */}
                     <div className="relative">
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
-                            className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                            className="flex items-center gap-3 p-1 rounded-2xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-all"
                         >
-                            <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold text-sm">
+                            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-indigo-600/20">
                                 {session?.user?.name?.charAt(0) || "A"}
                             </div>
-                            <div className="hidden sm:block text-left">
-                                <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                            <div className="hidden sm:block text-left pr-1">
+                                <p className="text-sm font-bold text-zinc-900 dark:text-white leading-tight">
                                     {session?.user?.name || "Admin"}
                                 </p>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                                     {session?.user?.role || "ADMIN"}
                                 </p>
                             </div>
-                            <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
+                            <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-300 ${showUserMenu ? "rotate-180" : ""}`} />
                         </button>
 
                         {/* Dropdown Menu */}
-                        {showUserMenu && (
-                            <>
-                                <div
-                                    className="fixed inset-0 z-40"
-                                    onClick={() => setShowUserMenu(false)}
-                                />
-                                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl z-50">
-                                    <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
-                                        <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                                            {session?.user?.email}
-                                        </p>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                            {session?.user?.role}
-                                        </p>
-                                    </div>
-                                    <div className="p-1">
-                                        <button
-                                            onClick={() => {
-                                                setShowUserMenu(false);
-                                                // Navigate to profile
-                                            }}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                            </svg>
-                                            Profile
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setShowUserMenu(false);
-                                                signOut({ callbackUrl: "/admin-login" });
-                                            }}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-md"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                            </svg>
-                                            Sign Out
-                                        </button>
-                                    </div>
-                                </div>
-                            </>
-                        )}
+                        <AnimatePresence>
+                            {showUserMenu && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setShowUserMenu(false)}
+                                    />
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        transition={{ duration: 0.2, ease: "easeOut" }}
+                                        className="absolute right-0 mt-3 w-64 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200 dark:border-white/5 rounded-3xl shadow-2xl z-50 overflow-hidden origin-top-right whitespace-nowrap"
+                                    >
+                                        <div className="p-6 bg-zinc-50/50 dark:bg-white/5 border-b border-zinc-100 dark:border-white/5 relative overflow-hidden group">
+                                            {/* Decorative glow */}
+                                            <div className="absolute -right-4 -top-4 w-12 h-12 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all" />
+
+                                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Authenticated User</p>
+                                            <p className="text-sm font-black text-zinc-900 dark:text-white truncate">
+                                                {session?.user?.email}
+                                            </p>
+                                            <div className="mt-3 flex items-center gap-2">
+                                                <span className="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest">Online</span>
+                                                <span className="px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase tracking-widest">{session?.user?.role}</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-2">
+                                            <button
+                                                onClick={() => {
+                                                    setShowUserMenu(false);
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-2xl transition-all"
+                                            >
+                                                <User className="w-4 h-4" />
+                                                Account Profile
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowUserMenu(false);
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-2xl transition-all"
+                                            >
+                                                <Settings className="w-4 h-4" />
+                                                System Settings
+                                            </button>
+                                            <div className="h-px bg-zinc-100 dark:bg-white/5 my-2 mx-4" />
+                                            <button
+                                                onClick={() => {
+                                                    setShowUserMenu(false);
+                                                    signOut({ callbackUrl: "/admin-login" });
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-2xl transition-all"
+                                            >
+                                                <LogOut className="w-4 h-4" />
+                                                Logout Session
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </>
+                            )}
+                        </AnimatePresence>
                     </div>
                 </div>
             </div>
