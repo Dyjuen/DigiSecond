@@ -65,6 +65,7 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
                 onPressOut={handlePressOut}
             >
                 <View>
+                    {/* @ts-ignore - RNP typings mismatch for source */}
                     <Card.Cover source={{ uri: imageUrl }} style={styles.image} />
                     <Animated.View style={[styles.favoriteButtonWrapper, { transform: [{ scale: heartScaleAnim }] }]}>
                         <IconButton
@@ -77,6 +78,7 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
                     </Animated.View>
                 </View>
                 <Card.Content style={styles.content}>
+                    {/* @ts-ignore - RNP typings mismatch for numberOfLines */}
                     <Text variant="bodyMedium" numberOfLines={2} style={styles.title}>
                         {title}
                     </Text>

@@ -11,6 +11,13 @@ export interface Listing {
     sellerId: string;
 }
 
+export interface FilterOptions {
+    category?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+    sortBy?: 'newest' | 'price_asc' | 'price_desc';
+}
+
 export const CURRENT_USER_ID = "user_me";
 
 interface ListingState {
@@ -19,6 +26,7 @@ interface ListingState {
     updateListing: (id: string, listing: Partial<Listing>) => void;
     deleteListing: (id: string) => void;
     getListingById: (id: string) => Listing | undefined;
+    getFilteredListings: (query: string, filters: FilterOptions) => Listing[];
 }
 
 const MOCK_LISTINGS: Listing[] = [
@@ -84,4 +92,48 @@ export const useListingStore = create<ListingState>((set, get) => ({
         listings: state.listings.filter((l) => l.id !== id),
     })),
     getListingById: (id) => get().listings.find((l) => l.id === id),
+    getFilteredListings: (query, filters) => {
+        let result = get().listings;
+
+        // 1. Text Search
+        if (query) {
+            const lowerQuery = query.toLowerCase();
+            result = result.filter(l =>
+                l.title.toLowerCase().includes(lowerQuery) ||
+                l.description.toLowerCase().includes(lowerQuery)
+            );
+        }
+
+        // 2. Category Filter
+        if (filters.category && filters.category.length > 0) {
+            result = result.filter(l => l.category && filters.category?.includes(l.category));
+        }
+
+        // 3. Price Filter
+        if (filters.minPrice !== undefined) {
+            result = result.filter(l => l.price >= filters.minPrice!);
+        }
+        if (filters.maxPrice !== undefined) {
+            result = result.filter(l => l.price <= filters.maxPrice!);
+        }
+
+        // 4. Sort
+        if (filters.sortBy) {
+            result = [...result]; // Clone to avoid mutating generic list
+            switch (filters.sortBy) {
+                case 'price_asc':
+                    result.sort((a, b) => a.price - b.price);
+                    break;
+                case 'price_desc':
+                    result.sort((a, b) => b.price - a.price);
+                    break;
+                case 'newest':
+                    // Mock data doesn't have reliable dates, assume ID order is time order for now
+                    result.sort((a, b) => Number(b.id) - Number(a.id));
+                    break;
+            }
+        }
+
+        return result;
+    }
 }));

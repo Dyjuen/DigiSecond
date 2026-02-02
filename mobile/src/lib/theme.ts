@@ -2,9 +2,13 @@ import { MD3LightTheme, MD3DarkTheme } from "react-native-paper";
 
 const sharedColors = {
     primary: "#6366f1",
+    onPrimary: "#ffffff",
     secondary: "#06b6d4",
+    onSecondary: "#ffffff",
     tertiary: "#f59e0b", // accent gold
+    onTertiary: "#ffffff",
     error: "#ef4444",
+    onError: "#ffffff",
 };
 
 export const lightTheme = {
