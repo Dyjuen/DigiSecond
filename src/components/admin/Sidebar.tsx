@@ -5,7 +5,20 @@ import { usePathname } from "next/navigation";
 import { useSidebarContext } from "./SidebarContext";
 import { useState } from "react";
 import Image from "next/image";
-import logoImage from "@/assets/images/digisecond-logo.png";
+import logoImage from "@/assets/icons/logotrans.png";
+import { motion, AnimatePresence } from "motion/react";
+import {
+    LayoutDashboard,
+    Users,
+    HeadphonesIcon,
+    Package,
+    History,
+    AlertTriangle,
+    Settings,
+    ChevronDown,
+    X,
+    GripVertical
+} from "lucide-react";
 
 interface NavItem {
     title: string;
@@ -21,29 +34,17 @@ const NAV_DATA: { label: string; items: NavItem[] }[] = [
             {
                 title: "Dashboard",
                 href: "/admin",
-                icon: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                ),
+                icon: <LayoutDashboard className="w-5 h-5" />,
             },
             {
                 title: "User Management",
                 href: "/admin/users",
-                icon: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                ),
+                icon: <Users className="w-5 h-5" />,
             },
             {
                 title: "Customer Support",
                 href: "/admin/support",
-                icon: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                ),
+                icon: <HeadphonesIcon className="w-5 h-5" />,
             },
         ],
     },
@@ -52,11 +53,7 @@ const NAV_DATA: { label: string; items: NavItem[] }[] = [
         items: [
             {
                 title: "Listings",
-                icon: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                ),
+                icon: <Package className="w-5 h-5" />,
                 items: [
                     { title: "All Listings", href: "/admin/listings" },
                     { title: "Pending Approval", href: "/admin/listings/pending" },
@@ -65,20 +62,12 @@ const NAV_DATA: { label: string; items: NavItem[] }[] = [
             {
                 title: "Transactions",
                 href: "/admin/transactions",
-                icon: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                ),
+                icon: <History className="w-5 h-5" />,
             },
             {
                 title: "Disputes",
                 href: "/admin/disputes",
-                icon: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                ),
+                icon: <AlertTriangle className="w-5 h-5" />,
             },
         ],
     },
@@ -88,12 +77,7 @@ const NAV_DATA: { label: string; items: NavItem[] }[] = [
             {
                 title: "Configuration",
                 href: "/admin/settings",
-                icon: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                ),
+                icon: <Settings className="w-5 h-5" />,
             },
         ],
     },
@@ -131,26 +115,23 @@ export function EnhancedSidebar() {
             >
                 <div className="flex h-full flex-col py-6 px-4">
                     {/* Logo */}
-                    <div className="flex items-center justify-between px-2 mb-8">
-                        <Link href="/admin" className="flex items-center gap-2">
-                            <div className="relative w-8 h-8">
+                    {/* Logo Area */}
+                    <div className="flex items-center justify-center relative w-full px-2 mb-10">
+                        <Link href="/admin" className="relative flex items-center justify-center group w-full">
+                            <div className="relative w-48 h-14">
                                 <Image
                                     src={logoImage}
                                     alt="DigiSecond"
                                     fill
-                                    className="object-contain"
+                                    className="object-contain object-center"
+                                    priority
                                 />
                             </div>
-                            <span className="font-bold text-xl text-zinc-900 dark:text-white">
-                                DigiSecond
-                            </span>
                         </Link>
 
                         {isMobile && (
-                            <button onClick={toggleSidebar} className="lg:hidden">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                            <button onClick={toggleSidebar} className="absolute right-2 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                <X className="w-5 h-5 text-zinc-500" />
                             </button>
                         )}
                     </div>
@@ -159,7 +140,7 @@ export function EnhancedSidebar() {
                     <nav className="flex-1 overflow-y-auto custom-scrollbar">
                         {NAV_DATA.map((section) => (
                             <div key={section.label} className="mb-6">
-                                <h3 className="px-2 mb-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                <h3 className="px-5 mb-3 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] opacity-80">
                                     {section.label}
                                 </h3>
                                 <ul className="space-y-1">
@@ -169,52 +150,59 @@ export function EnhancedSidebar() {
                                                 <>
                                                     <button
                                                         onClick={() => toggleExpanded(item.title)}
-                                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                                                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-semibold transition-all duration-300
                                                             ${item.items.some((sub) => pathname === sub.href)
-                                                                ? "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400"
-                                                                : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                                ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                                                                : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"
                                                             }`}
                                                     >
-                                                        {item.icon}
+                                                        <div className={`transition-transform duration-300 ${expandedItems.includes(item.title) ? "scale-110" : "scale-100"}`}>
+                                                            {item.icon}
+                                                        </div>
                                                         <span className="flex-1 text-left">{item.title}</span>
-                                                        <svg
-                                                            className={`w-4 h-4 transition-transform ${expandedItems.includes(item.title) ? "rotate-180" : ""}`}
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                        </svg>
+                                                        <ChevronDown
+                                                            className={`w-4 h-4 text-zinc-400 transition-transform duration-300 ${expandedItems.includes(item.title) ? "rotate-180" : ""}`}
+                                                        />
                                                     </button>
-                                                    {expandedItems.includes(item.title) && (
-                                                        <ul className="ml-9 mt-1 space-y-1">
-                                                            {item.items.map((subItem) => (
-                                                                <li key={subItem.href}>
-                                                                    <Link
-                                                                        href={subItem.href}
-                                                                        className={`block px-3 py-2 rounded-lg text-sm transition-colors
-                                                                            ${pathname === subItem.href
-                                                                                ? "text-indigo-600 dark:text-indigo-400 font-medium"
-                                                                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-                                                                            }`}
-                                                                    >
-                                                                        {subItem.title}
-                                                                    </Link>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    )}
+                                                    <AnimatePresence>
+                                                        {expandedItems.includes(item.title) && (
+                                                            <motion.ul
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                                className="ml-6 border-l border-zinc-100 dark:border-white/5 mt-1 space-y-1 overflow-hidden"
+                                                            >
+                                                                {item.items.map((subItem) => (
+                                                                    <li key={subItem.href}>
+                                                                        <Link
+                                                                            href={subItem.href}
+                                                                            className={`block px-5 py-2.5 rounded-xl text-sm transition-all duration-200
+                                                                                ${pathname === subItem.href
+                                                                                    ? "text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50/50 dark:bg-indigo-500/5"
+                                                                                    : "text-zinc-500 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
+                                                                                }`}
+                                                                        >
+                                                                            {subItem.title}
+                                                                        </Link>
+                                                                    </li>
+                                                                ))}
+                                                            </motion.ul>
+                                                        )}
+                                                    </AnimatePresence>
                                                 </>
                                             ) : (
                                                 <Link
                                                     href={item.href!}
-                                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                                                    className={`group flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold transition-all duration-300
                                                         ${pathname === item.href
-                                                            ? "bg-indigo-600 text-white"
-                                                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/25"
+                                                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"
                                                         }`}
                                                 >
-                                                    {item.icon}
+                                                    <div className={`transition-transform duration-300 ${pathname === item.href ? "scale-110" : "group-hover:scale-110"}`}>
+                                                        {item.icon}
+                                                    </div>
                                                     <span>{item.title}</span>
                                                 </Link>
                                             )}
