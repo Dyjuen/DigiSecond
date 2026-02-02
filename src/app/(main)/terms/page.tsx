@@ -31,15 +31,15 @@ const sections = [
             <ul className="space-y-3">
                 <li className="flex gap-2 text-zinc-600 dark:text-zinc-400">
                     <span className="text-brand-primary font-bold">•</span>
-                    <span><strong className="text-zinc-900 dark:text-white">"Platform"</strong> merujuk pada situs web dan layanan DigiSecond.</span>
+                    <span><strong className="text-zinc-900 dark:text-white">&quot;Platform&quot;</strong> merujuk pada situs web dan layanan DigiSecond.</span>
                 </li>
                 <li className="flex gap-2 text-zinc-600 dark:text-zinc-400">
                     <span className="text-brand-primary font-bold">•</span>
-                    <span><strong className="text-zinc-900 dark:text-white">"Pengguna"</strong> merujuk pada pembeli, penjual, atau pengunjung platform.</span>
+                    <span><strong className="text-zinc-900 dark:text-white">&quot;Pengguna&quot;</strong> merujuk pada pembeli, penjual, atau pengunjung platform.</span>
                 </li>
                 <li className="flex gap-2 text-zinc-600 dark:text-zinc-400">
                     <span className="text-brand-primary font-bold">•</span>
-                    <span><strong className="text-zinc-900 dark:text-white">"Produk Digital"</strong> merujuk pada akun game, item dalam game, voucher, atau aset digital lainnya yang diperdagangkan.</span>
+                    <span><strong className="text-zinc-900 dark:text-white">&quot;Produk Digital&quot;</strong> merujuk pada akun game, item dalam game, voucher, atau aset digital lainnya yang diperdagangkan.</span>
                 </li>
             </ul>
         )

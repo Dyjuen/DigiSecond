@@ -239,16 +239,16 @@ export default function LoginPage() {
                     raysOrigin="top-center"
                     raysColor={isAdminMode ? "#dc2626" : "#6366f1"} // Red for admin, Indigo for user
                     raysSpeed={0.5}
-                    lightSpread={0.2}
-                    rayLength={3}
+                    lightSpread={0.6}
+                    rayLength={4}
                     followMouse={true}
-                    mouseInfluence={0.2}
+                    mouseInfluence={0.3}
                     noiseAmount={0}
                     distortion={0}
                     pulsating={true}
                     fadeDistance={1}
-                    saturation={1}
-                    className="opacity-60"
+                    saturation={1.5}
+                    className="opacity-100"
                 />
             </section>
         </div>

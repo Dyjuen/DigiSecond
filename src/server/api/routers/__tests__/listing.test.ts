@@ -159,15 +159,12 @@ describe("Listing Router", () => {
             }
         });
 
-        it("should return nextCursor for pagination", async () => {
+        it("should return totalPages for pagination", async () => {
             const caller = createTestCaller(createUnauthenticatedContext());
             const result = await caller.listing.getAll({ limit: 1 });
 
-            // If there's more than 1 listing, should have nextCursor
-            if (result.listings.length === 1) {
-                // nextCursor may or may not exist depending on total count
-                expect(typeof result.nextCursor).toMatch(/string|undefined/);
-            }
+            expect(result.totalPages).toBeDefined();
+            expect(typeof result.totalPages).toBe("number");
         });
 
         it("should search by title/description", async () => {
@@ -212,11 +209,13 @@ describe("Listing Router", () => {
 
             const caller = createTestCaller(createUnauthenticatedContext());
             const result = await caller.listing.getById({ id: listing.listing_id });
-
-            expect(result.listing_id).toBe(listing.listing_id);
-            expect(result.title).toBe("Test Listing GetById");
-            expect(result.seller).toBeDefined();
-            expect(result.seller.name).toBeDefined();
+            expect(result).not.toBeNull();
+            if (result) {
+                expect(result.listing_id).toBe(listing.listing_id);
+                expect(result.title).toBe("Test Listing GetById");
+                expect(result.seller).toBeDefined();
+                expect(result.seller.name).toBeDefined();
+            }
         });
 
         it("should return null for non-existent listing", async () => {
@@ -243,9 +242,11 @@ describe("Listing Router", () => {
 
             const caller = createTestCaller(createUnauthenticatedContext());
             const result = await caller.listing.getById({ id: listing.listing_id });
-
-            expect(result.bidCount).toBeDefined();
-            expect(typeof result.bidCount).toBe("number");
+            expect(result).not.toBeNull();
+            if (result) {
+                expect(result.bidCount).toBeDefined();
+                expect(typeof result.bidCount).toBe("number");
+            }
         });
     });
 

@@ -1,440 +1,382 @@
 "use client";
 
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { useSearchParams, useRouter } from "next/navigation";
+import { Search, SlidersHorizontal, ArrowRight } from "lucide-react";
 import { useState, useEffect, Suspense } from "react";
-import { Countdown } from "@/components/ui/countdown";
-
 import { api } from "@/trpc/react";
+import { logoMap } from "@/assets/images/logo-map";
 import { Aurora } from "@/components/effects/Aurora";
+import { motion, AnimatePresence } from "motion/react";
+import { SortDropdown, type SortOption } from "@/components/ui/SortDropdown";
+import { Pagination } from "@/components/ui/Pagination";
+import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
 
-import mobileLegendsLogo from "@/assets/images/Mobile-legends-logo.svg.png";
-import freeFireLogo from "@/assets/images/FREE_FIRE_LOGO.PNG_WHITE.png";
-import pubgLogo from "@/assets/images/PUBG_Corporation_Logo.svg.png";
-import genshinLogo from "@/assets/images/Genshin_Impact_logo.svg.png";
-import valorantLogo from "@/assets/images/Valorant_logo_-_pink_color_version.svg.png";
-import robloxLogo from "@/assets/images/Roblox_logo_2017.svg.png";
-import steamLogo from "@/assets/images/Steam_icon_logo.svg.png";
-import playstationLogo from "@/assets/images/Playstation_logo_colour.svg.png";
-import nintendoLogo from "@/assets/images/Nintendo_red_logo.svg.png";
-
-const logoMap: Record<string, any> = {
-    "Mobile Legends": mobileLegendsLogo,
-    "Free Fire": freeFireLogo,
-    "PUBG Mobile": pubgLogo,
-    "Genshin Impact": genshinLogo,
-    "Valorant": valorantLogo,
-    "Roblox": robloxLogo,
-    "Steam": steamLogo,
-    "PlayStation": playstationLogo,
-    "Nintendo": nintendoLogo,
-};
-
-// Categories for UI filtering (Sudah terintegrasi database)
-const categories = [
-    { name: "Mobile Legends", slug: "mobile-legends", logo: mobileLegendsLogo },
-    { name: "Free Fire", slug: "free-fire", logo: freeFireLogo },
-    { name: "PUBG Mobile", slug: "pubg-mobile", logo: pubgLogo },
-    { name: "Genshin Impact", slug: "genshin-impact", logo: genshinLogo },
-    { name: "Valorant", slug: "valorant", logo: valorantLogo },
-    { name: "Roblox", slug: "roblox", logo: robloxLogo },
-    { name: "Steam", slug: "steam", logo: steamLogo },
-    { name: "PlayStation", slug: "playstation", logo: playstationLogo },
-    { name: "Nintendo", slug: "nintendo", logo: nintendoLogo },
-    { name: "Lainnya", slug: "other", logo: null },
+const sortOptions: SortOption[] = [
+    { id: "newest", label: "Terbaru" },
+    { id: "price_asc", label: "Harga: Terendah" },
+    { id: "price_desc", label: "Harga: Tertinggi" },
 ];
 
-import { useTheme } from "next-themes";
+const categories = [
+    { name: "Mobile Legends", slug: "mobile-legends" },
+    { name: "Free Fire", slug: "free-fire" },
+    { name: "PUBG Mobile", slug: "pubg-mobile" },
+    { name: "Genshin Impact", slug: "genshin-impact" },
+    { name: "Valorant", slug: "valorant" },
+    { name: "Roblox", slug: "roblox" },
+    { name: "Steam", slug: "steam" },
+    { name: "PlayStation", slug: "playstation" },
+    { name: "Nintendo", slug: "nintendo" },
+];
 
 function ListingsContent() {
     const { resolvedTheme } = useTheme();
     const searchParams = useSearchParams();
     const router = useRouter();
+
+    const categoryFilter = searchParams.get("category") || "";
     const typeFilter = searchParams.get("type") || "all";
-    const categoryFilter = searchParams.get("category");
     const sortFilter = searchParams.get("sort") || "newest";
-    const [searchQuery, setSearchQuery] = useState("");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const searchFilter = searchParams.get("search") || "";
+    const pageFilter = Number(searchParams.get("page")) || 1;
 
-    // Search query dari URL
-    useEffect(() => {
-        const searchFromUrl = searchParams.get("search");
-        if (searchFromUrl) {
-            setSearchQuery(searchFromUrl);
-            setDebouncedSearch(searchFromUrl);
-        } else {
-            setSearchQuery("");
-            setDebouncedSearch("");
-        }
-    }, [searchParams]);
+    const [searchInput, setSearchInput] = useState(searchFilter);
 
-    // Debounce
+    // Debounce search
     useEffect(() => {
         const timer = setTimeout(() => {
-            setDebouncedSearch(searchQuery);
-        }, 300);
+            if (searchInput !== searchFilter) {
+                const params = new URLSearchParams(searchParams);
+                params.set("search", searchInput);
+                params.set("page", "1");
+                router.push(`/listings?${params.toString()}`);
+            }
+        }, 500);
         return () => clearTimeout(timer);
-    }, [searchQuery]);
+    }, [searchInput, searchFilter, router, searchParams]);
 
-    // Map sort values to API format
-    const sortByMap: Record<string, "newest" | "price_asc" | "price_desc"> = {
-        latest: "newest",
-        newest: "newest",
-        price_asc: "price_asc",
-        price_desc: "price_desc",
-    };
-
-    // Fetch listings using tRPC with all filters
     const { data, isLoading } = api.listing.getAll.useQuery({
-        type: typeFilter === "all" ? undefined : (typeFilter === "fixed" ? "FIXED" : "AUCTION"),
         category: categoryFilter || undefined,
-        search: debouncedSearch || undefined,
-        sortBy: sortByMap[sortFilter] || "newest",
+        type: typeFilter === "all" ? undefined : (typeFilter === "fixed" ? "FIXED" : "AUCTION"),
+        sortBy: sortFilter as any,
+        search: searchFilter || undefined,
+        limit: 10,
+        page: pageFilter,
     });
 
     const listings = data?.listings || [];
+    const totalPages = data?.totalPages || 1;
+
+    const handleSortChange = (newSort: string) => {
+        const params = new URLSearchParams(searchParams);
+        params.set("sort", newSort);
+        router.push(`/listings?${params.toString()}`);
+    };
+
+    const handlePageChange = (newPage: number) => {
+        const params = new URLSearchParams(searchParams);
+        params.set("page", newPage.toString());
+        router.push(`/listings?${params.toString()}`);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
 
     const handleTypeChange = (type: string) => {
         const params = new URLSearchParams(searchParams);
         if (type === "all") params.delete("type");
         else params.set("type", type);
+        params.set("page", "1");
         router.push(`/listings?${params.toString()}`);
     };
 
-    const popularSuggestions = ["Mobile Legends", "Free Fire", "PUBG Mobile", "Genshin Impact", "Valorant"];
-
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-12 relative overflow-hidden">
-            <div className="absolute inset-0 z-0 pointer-events-none opacity-30">
-                <Aurora
-                    colorStops={resolvedTheme === "light" ? ["#6366f1", "#a5b4fc", "#c7d2fe"] : ["#6366f1", "#a5b4fc", "#6366f1"]}
-                    blend={0.5}
-                    amplitude={0.8}
-                    speed={0.4}
-                />
+            <div className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-20 translate-y-[-20%]">
+                <Aurora colorStops={["#6366f1", "#a855f7", "#6366f1"]} amplitude={0.8} />
             </div>
+
             <div className="relative z-10 max-w-7xl mx-auto px-6">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-4">
-                        Marketplace
-                    </h1>
-                    <p className="text-zinc-600 dark:text-zinc-400 text-lg">
-                        Temukan akun game, item, dan aset digital dengan harga terbaik
-                    </p>
+                <div className="mb-12">
+                    <motion.h1
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-5xl md:text-7xl font-black text-zinc-900 dark:text-white mb-4 tracking-tighter leading-[0.9]"
+                    >
+                        Marketplace <br /><span className="text-brand-primary">Layanan Game</span>
+                    </motion.h1>
+                    <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="text-zinc-500 dark:text-zinc-400 max-w-2xl text-lg font-medium"
+                    >
+                        Temukan layanan joki, pemandu, dan akun game terbaik dengan keamanan Escrow.
+                    </motion.p>
                 </div>
 
-                {/* Filters */}
-                <div className="flex flex-col md:flex-row gap-4 mb-8 sticky top-20 z-10 py-4 -mx-4 px-4 md:mx-0 md:px-0 pointer-events-none">
-                    <div className="flex-1 pointer-events-auto">
-                        <div className="relative">
-                            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                type="search"
-                                placeholder="Cari akun, item, atau game..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full h-12 pl-12 pr-4 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-white placeholder-zinc-500 focus:outline-none focus:border-brand-primary transition-colors"
-                            />
+                <div className="flex flex-col md:flex-row gap-4 mb-8 sticky top-20 z-10 py-4 -mx-4 px-4 md:mx-0 md:px-0 bg-transparent">
+                    <div className="flex-1 relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-brand-primary transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Cari layanan, game, atau seller..."
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            className="w-full h-12 pl-12 pr-4 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all text-zinc-900 dark:text-white placeholder:text-zinc-500"
+                        />
+                    </div>
+
+                    <div className="flex p-1.5 bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm">
+                        {[
+                            { id: "all", label: "Semua" },
+                            { id: "fixed", label: "Direct Buy" },
+                            { id: "auction", label: "Lelang" },
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => handleTypeChange(tab.id)}
+                                className={cn(
+                                    "relative px-6 py-2 text-sm font-bold rounded-xl transition-colors duration-300 z-10",
+                                    typeFilter === tab.id ? "text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                                )}
+                            >
+                                {typeFilter === tab.id && (
+                                    <motion.div
+                                        layoutId="activeTab"
+                                        className="absolute inset-0 bg-brand-primary rounded-xl shadow-lg shadow-brand-primary/25 -z-10"
+                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                    />
+                                )}
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <SortDropdown
+                        options={sortOptions}
+                        value={sortFilter}
+                        onChange={handleSortChange}
+                    />
+                </div>
+
+                {/* Categories Scrollable with Icons */}
+                {!categoryFilter && (
+                    <div className="mb-10 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
+                        <div className="flex gap-3">
+                            {categories.map((cat, i) => {
+                                const logo = logoMap[cat.name];
+                                return (
+                                    <motion.button
+                                        key={cat.slug}
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: i * 0.05 }}
+                                        onClick={() => {
+                                            const params = new URLSearchParams(searchParams);
+                                            params.set("category", cat.slug);
+                                            params.set("page", "1");
+                                            router.push(`/listings?${params.toString()}`);
+                                        }}
+                                        className="flex items-center gap-3 px-5 py-2.5 whitespace-nowrap bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm font-bold hover:border-brand-primary hover:text-brand-primary transition-all shadow-sm group"
+                                    >
+                                        {logo && (
+                                            <div className="relative w-5 h-5 shrink-0 group-hover:scale-110 transition-transform">
+                                                <Image src={logo} alt={cat.name} fill className="object-contain" />
+                                            </div>
+                                        )}
+                                        {cat.name}
+                                    </motion.button>
+                                );
+                            })}
                         </div>
                     </div>
+                )}
 
-                    {/* Type Tabs */}
-                    <div className="flex p-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl relative z-0 pointer-events-auto">
-                        <button
-                            onClick={() => handleTypeChange("all")}
-                            className={`relative z-10 px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${typeFilter === "all" ? "bg-white dark:bg-zinc-800 text-brand-primary shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"}`}
-                        >
-                            Semua
-                        </button>
-                        <button
-                            onClick={() => handleTypeChange("fixed")}
-                            className={`relative z-10 px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${typeFilter === "fixed" ? "bg-white dark:bg-zinc-800 text-brand-primary shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"}`}
-                        >
-                            Beli Langsung
-                        </button>
-                        <button
-                            onClick={() => handleTypeChange("auction")}
-                            className={`relative z-10 px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${typeFilter === "auction" ? "bg-brand-primary text-white shadow-lg shadow-brand-primary/25" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"}`}
-                        >
-                            Lelang
-                        </button>
-                    </div>
-
-                    <select
-                        onChange={(e) => {
-                            const params = new URLSearchParams(searchParams);
-                            params.set("sort", e.target.value);
-                            router.push(`/listings?${params.toString()}`);
-                        }}
-                        className="pointer-events-auto h-12 px-4 pr-10 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-white focus:outline-none focus:border-brand-primary appearance-none cursor-pointer"
-                        value={sortFilter}
-                    >
-                        <option value="newest">Urutkan: Terbaru</option>
-                        <option value="price_asc">Harga: Terendah</option>
-                        <option value="price_desc">Harga: Tertinggi</option>
-                    </select>
-                </div>
-
-                {/* Active Filter Badge - Show when category is selected */}
                 {categoryFilter && (
                     <div className="mb-6 flex items-center gap-2">
-                        <span className="text-sm text-zinc-500">Filter aktif:</span>
-                        <button
+                        <span className="text-sm text-zinc-500 font-medium tracking-wide">FILTER:</span>
+                        <motion.button
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
                             onClick={() => {
                                 const params = new URLSearchParams(searchParams);
                                 params.delete("category");
+                                params.set("page", "1");
                                 router.push(`/listings?${params.toString()}`);
                             }}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-primary/10 border border-brand-primary/20 rounded-full text-brand-primary text-sm font-medium hover:bg-brand-primary/20 transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-primary/10 border border-brand-primary/20 rounded-full text-brand-primary text-sm font-bold hover:bg-brand-primary/20 transition-all group"
                         >
                             {categories.find(c => c.slug === categoryFilter)?.name || categoryFilter}
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                            <span className="w-4 h-4 rounded-full bg-brand-primary/20 flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white transition-colors">×</span>
+                        </motion.button>
                     </div>
                 )}
 
-                {/* Categories - Only show if no category filter active */}
-                {!categoryFilter && (
-                    <div className="mb-12">
-                        <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">Kategori</h2>
-                        <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-3">
-                            {categories.map(cat => (
-                                <Link
-                                    key={cat.name}
-                                    href={`/listings?category=${cat.slug}`}
-                                    className="group p-4 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-brand-primary hover:shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all flex flex-col items-center text-center"
-                                >
-                                    <div className="w-12 h-12 mb-2 relative flex items-center justify-center">
-                                        {cat.logo ? (
-                                            <Image
-                                                src={cat.logo}
-                                                alt={cat.name}
-                                                fill
-                                                className="object-contain group-hover:scale-110 transition-transform"
-                                            />
-                                        ) : (
-                                            <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary text-lg font-bold group-hover:scale-110 transition-transform">
-                                                {cat.name === "Lainnya" ? (
-                                                    <div className="flex gap-0.5">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
-                                                    </div>
-                                                ) : (
-                                                    cat.name.charAt(0)
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <p className="font-medium text-zinc-900 dark:text-white text-xs">{cat.name}</p>
-                                </Link>
-                            ))}
-                        </div>
+                {isLoading ? (
+                    <div className="py-20 flex flex-col items-center justify-center gap-4">
+                        <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-zinc-500 font-medium">Memuat listing...</p>
                     </div>
-                )}
-
-                {/* Auction Banner */}
-                {typeFilter === "auction" && (
-                    <div className="mb-10 relative overflow-hidden rounded-3xl bg-white dark:bg-[#0f0f15] border border-zinc-200 dark:border-zinc-800 group shadow-lg">
-                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
-
-                        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between p-8 md:p-10 gap-8">
-                            <div className="text-center md:text-left max-w-2xl">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-primary/10 border border-brand-primary/20 rounded-full text-brand-primary text-xs font-bold mb-4">
-                                    <span className="relative flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-primary"></span>
-                                    </span>
-                                    LIVE AUCTION
-                                </div>
-                                <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-3">
-                                    Lelang Digital Eksklusif
-                                </h2>
-                                <p className="text-zinc-500 dark:text-zinc-400 text-lg leading-relaxed">
-                                    Tawar dan menangkan akun game langka & aset premium dengan harga terbaik.
-                                    Sistem transparan, aman, dan real-time.
-                                </p>
-                            </div>
-
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="bg-zinc-100 dark:bg-zinc-900/50 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm">
-                                    <div className="text-zinc-500 text-xs font-medium uppercase tracking-wider text-center mb-1">Status</div>
-                                    <div className="flex items-center gap-2 text-xl font-bold text-zinc-900 dark:text-white">
-                                        <span className="text-brand-primary">Active</span>
-                                        <span className="text-zinc-300 dark:text-zinc-700">|</span>
-                                        <span>24 Items</span>
-                                    </div>
-                                </div>
-                                <Link href="/lelang" className="px-8 py-3 bg-brand-primary hover:bg-brand-primary-dark text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-primary/25 hover:-translate-y-1">
-                                    Mulai Menawar
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Listing Results */}
-                <div>
-                    <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4 flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                            {typeFilter === "auction" && <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>}
-                            {typeFilter === "auction" ? "Sedang Dilelang" : typeFilter === "fixed" ? "Beli Langsung" : "Semua Listing"}
-                        </span>
-                        <span className="text-sm font-normal text-zinc-500">
-                            {isLoading ? "Loading..." : `${listings.length} hasil`}
-                        </span>
-                    </h2>
-
-                    {isLoading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                    ) : listings.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {listings.map(listing => {
-                                const isAuction = listing.listing_type === "AUCTION";
-                                return (
-                                    <Link
-                                        key={listing.listing_id}
-                                        href={`/listings/${listing.listing_id}`}
-                                        className={`group relative rounded-2xl overflow-hidden flex flex-col transition-all duration-300 ${isAuction
-                                            ? "bg-white dark:bg-zinc-900 border-2 border-brand-primary/30 hover:border-brand-primary hover:shadow-[0_0_30px_rgba(99,102,241,0.2)]"
-                                            : "bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 hover:border-brand-primary hover:shadow-lg hover:shadow-brand-primary/10"
-                                            }`}
-                                    >
-                                        {isAuction && (
-                                            <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 via-transparent to-indigo-500/5 pointer-events-none"></div>
-                                        )}
-
-                                        <div className={`h-48 flex items-center justify-center relative ${isAuction ? "bg-gradient-to-br from-brand-primary/5 to-indigo-500/10" : "bg-zinc-100 dark:bg-zinc-800"
-                                            }`}>
-                                            {logoMap[listing.game] ? (
-                                                <div className="relative w-24 h-24">
-                                                    <Image
-                                                        src={logoMap[listing.game]}
-                                                        alt={listing.game}
-                                                        fill
-                                                        className="object-contain"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold bg-brand-primary/10 text-brand-primary">
-                                                    {listing.game.charAt(0)}
-                                                </div>
-                                            )}
-                                            {isAuction && (
-                                                <div className="absolute top-3 right-3">
-                                                    <div className="bg-brand-primary text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                                                        LIVE
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {isAuction && listing.auction_ends_at && (
-                                                <div className="absolute bottom-3 left-3 right-3">
-                                                    <div className="bg-black/60 backdrop-blur-md rounded-lg px-3 py-2 flex items-center justify-between">
-                                                        <span className="text-white/60 text-xs">Berakhir dalam</span>
-                                                        <Countdown targetDate={new Date(listing.auction_ends_at)} className="text-sm font-mono font-bold text-white" />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="p-5 flex-1 flex flex-col relative z-10">
-                                            <div className="flex items-start justify-between mb-2">
-                                                <Badge variant="secondary" className={`text-xs ${isAuction
-                                                    ? "bg-brand-primary/10 text-brand-primary border border-brand-primary/20"
-                                                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 group-hover:bg-brand-primary/20 group-hover:text-brand-primary"
-                                                    }`}>
-                                                    {listing.game}
-                                                </Badge>
-                                                {isAuction && (
-                                                    <span className="text-xs font-medium text-brand-primary bg-brand-primary/10 px-2 py-1 rounded-md">
-                                                        {listing.bidCount} bid
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <h3 className="font-semibold text-zinc-900 dark:text-white text-lg mb-1 transition-colors line-clamp-1 group-hover:text-brand-primary">
-                                                {listing.title}
-                                            </h3>
-
-                                            <div className={`mt-auto pt-4 border-t flex items-center justify-between ${isAuction ? "border-brand-primary/20" : "border-zinc-200 dark:border-zinc-800"
-                                                }`}>
-                                                <div>
-                                                    <p className="text-xs text-zinc-500 mb-0.5">
-                                                        {isAuction ? "Penawaran Tertinggi" : "Harga"}
-                                                    </p>
-                                                    <p className="text-lg font-bold text-brand-primary">
-                                                        Rp {(isAuction && listing.current_bid ? listing.current_bid : listing.price).toLocaleString("id-ID")}
-                                                    </p>
-                                                </div>
-                                                {isAuction && (
-                                                    <button className="px-4 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-brand-primary-dark transition-all shadow-lg shadow-brand-primary/25">
-                                                        Tawar
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    ) : (
-                        <div className="text-center py-20 bg-zinc-100 dark:bg-zinc-900/30 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800">
-                            <span className="text-4xl block mb-4">🔍</span>
-                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Tidak ada listing ditemukan</h3>
-                            <p className="text-zinc-500 mb-6">Coba ubah filter atau kata kunci pencarian Anda.</p>
-
-                            {searchQuery && (
-                                <div className="mb-6">
-                                    <p className="text-sm text-zinc-500 mb-3">Mungkin maksud Anda:</p>
-                                    <div className="flex flex-wrap justify-center gap-2">
-                                        {popularSuggestions.map(term => (
-                                            <button
-                                                key={term}
-                                                onClick={() => {
-                                                    setSearchQuery(term);
-                                                    router.push(`/listings?search=${encodeURIComponent(term)}`);
-                                                }}
-                                                className="px-4 py-1.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full text-sm hover:border-brand-primary transition-colors"
-                                            >
-                                                {term}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <button
-                                onClick={() => {
-                                    handleTypeChange("all");
-                                    setSearchQuery("");
-                                    router.push("/listings");
-                                }}
-                                className="px-6 py-2 bg-brand-primary text-white rounded-xl font-medium hover:bg-brand-primary-dark transition-colors"
+                ) : (
+                    <AnimatePresence mode="wait">
+                        {listings.length > 0 ? (
+                            <motion.div
+                                key={`${typeFilter}-${categoryFilter}-${pageFilter}-${sortFilter}`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="space-y-12"
                             >
-                                Reset Filter
-                            </button>
-                        </div>
-                    )}
-                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                                    {listings.map((listing, i) => (
+                                        <motion.div
+                                            key={listing.listing_id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.05 }}
+                                        >
+                                            <ListingCard listing={listing} />
+                                        </motion.div>
+                                    ))}
+                                </div>
+
+                                <Pagination
+                                    currentPage={pageFilter}
+                                    totalPages={totalPages}
+                                    onPageChange={handlePageChange}
+                                />
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="py-24 text-center bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl"
+                            >
+                                <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Search className="w-8 h-8 text-zinc-400" />
+                                </div>
+                                <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Layanan tidak ditemukan</h2>
+                                <p className="text-zinc-500">Coba ubah filter atau kata kunci pencarian Anda.</p>
+                                <button
+                                    onClick={() => router.push("/listings")}
+                                    className="mt-6 px-6 py-2 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-primary-dark transition-all shadow-lg shadow-brand-primary/20"
+                                >
+                                    Reset Semua Filter
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                )}
             </div>
         </div>
     );
 }
 
+function ListingCard({ listing }: { listing: any }) {
+    const isAuction = listing.listing_type === "AUCTION";
+    const logo = logoMap[listing.game];
+
+    return (
+        <Link
+            href={`/listings/${listing.listing_id}`}
+            className={cn(
+                "group relative bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col h-full transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:border-brand-primary/30",
+                isAuction && "ring-1 ring-brand-primary/10"
+            )}
+        >
+            <div className={cn(
+                "relative h-44 flex items-center justify-center overflow-hidden",
+                isAuction ? "bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20" : "bg-zinc-100/30 dark:bg-zinc-800/30"
+            )}>
+                {logo ? (
+                    <div className="relative w-24 h-24 transform group-hover:scale-125 transition-transform duration-700 ease-out z-10">
+                        <Image
+                            src={logo}
+                            alt={listing.game}
+                            fill
+                            className="object-contain drop-shadow-2xl"
+                        />
+                    </div>
+                ) : (
+                    <div className="w-16 h-16 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-3xl font-bold text-brand-primary z-10">
+                        {listing.game.charAt(0)}
+                    </div>
+                )}
+
+                <div className="absolute inset-0 opacity-10 pointer-events-none transition-transform duration-1000 group-hover:scale-150">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-brand-primary/30 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+
+                {isAuction && (
+                    <div className="absolute top-3 right-3 z-20">
+                        <div className="bg-brand-primary text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg shadow-brand-primary/30">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                            LELANG
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="p-5 flex-1 flex flex-col relative z-20">
+                <div className="flex items-center gap-2 mb-3">
+                    <Badge variant="secondary" className="text-[10px] font-bold px-2 py-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 group-hover:bg-brand-primary group-hover:text-white transition-colors duration-300">
+                        {listing.game}
+                    </Badge>
+                </div>
+
+                <h3 className="font-bold text-zinc-900 dark:text-white text-base mb-3 line-clamp-2 leading-tight group-hover:text-brand-primary transition-colors min-h-[2.5rem]">
+                    {listing.title}
+                </h3>
+
+                <div className="mt-auto">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden relative border border-zinc-200/50 dark:border-zinc-700/50">
+                            {listing.seller.avatar_url ? (
+                                <Image src={listing.seller.avatar_url} alt={listing.seller.name} fill className="object-cover" />
+                            ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                                    {listing.seller.name.charAt(0)}
+                                </div>
+                            )}
+                        </div>
+                        <span className="text-xs text-zinc-500 font-medium truncate max-w-[100px]">
+                            {listing.seller.name}
+                        </span>
+                        {listing.seller.is_verified && (
+                            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-blue-500 fill-current"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" /></svg>
+                        )}
+                    </div>
+
+                    <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between group-hover:border-brand-primary/20 transition-colors">
+                        <div>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">
+                                {isAuction ? "Highest Bid" : "Price"}
+                            </p>
+                            <p className="text-lg font-black text-brand-primary">
+                                Rp {(isAuction && listing.current_bid ? listing.current_bid : listing.price).toLocaleString("id-ID")}
+                            </p>
+                        </div>
+                        <div className="w-9 h-9 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white transition-all duration-300">
+                            <ArrowRight className="w-4 h-4" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Link>
+    );
+}
+
 export default function ListingsPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-12 text-center text-zinc-900 dark:text-white">Loading...</div>}>
+        <Suspense fallback={
+            <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-12 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }>
             <ListingsContent />
         </Suspense>
     );

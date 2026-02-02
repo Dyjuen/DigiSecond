@@ -9,6 +9,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { Marquee } from "@/components/sections/marquee";
 import { Blur } from "@/components/sections/blur";
 import TrueFocus from "@/components/effects/TrueFocus";
+import Image from "next/image";
+import { logoMap } from "@/assets/images/logo-map";
 import { api } from "@/trpc/react";
 
 const gameCategories = [
@@ -59,17 +61,23 @@ export function HeroSection() {
                         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
                             {/* Left Content */}
                             <div>
-                                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 text-zinc-900 dark:text-white leading-tight">
-                                    Trading Digital Goods{" "}
-                                    <div className="mt-2 text-brand-primary">
-                                        <TrueFocus
-                                            sentence="Aman & Terpercaya"
-                                            manualMode={false}
-                                            blurAmount={5}
-                                            borderColor="#6366f1"
-                                            animationDuration={0.5}
-                                            pauseBetweenAnimations={1}
-                                        />
+                                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 sm:mb-6 text-zinc-900 dark:text-white leading-[1.1] tracking-tight">
+                                    Trading Digital <br /> Goods{" "}
+                                    <div className="mt-2 text-brand-primary flex items-center gap-3">
+                                        <div className="relative inline-flex items-center">
+                                            <span className="text-brand-primary/40 -mr-1 text-5xl md:text-6xl font-light">[</span>
+                                            <TrueFocus
+                                                sentence="Aman"
+                                                manualMode={false}
+                                                blurAmount={5}
+                                                borderColor="#6366f1"
+                                                animationDuration={0.5}
+                                                pauseBetweenAnimations={1}
+                                            />
+                                            <span className="text-brand-primary/40 -ml-1 text-5xl md:text-6xl font-light">]</span>
+                                        </div>
+                                        <span className="text-zinc-400">&</span>
+                                        <span className="text-zinc-900 dark:text-white">Terpercaya</span>
                                     </div>
                                 </h1>
 
@@ -211,31 +219,44 @@ export function HeroSection() {
                         </div>
                     </div>
 
-                    {/* Game Categories Marquee - INSIDE CONTAINER */}
                     <div className="relative py-6 sm:py-10 w-full z-10 border-t border-zinc-200 dark:border-zinc-800/50 [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
                         <Marquee pauseOnHover speed={40} className="[--gap:1.5rem] py-4">
-                            {gameCategories.map((category, index) => (
-                                <div
-                                    key={index}
-                                    className={`
-                                        group/item relative flex items-center gap-2 px-4 py-2.5 
-                                        rounded-xl bg-zinc-100/50 dark:bg-zinc-900/50 
-                                        border border-zinc-200 dark:border-zinc-800 
-                                        backdrop-blur-sm cursor-pointer overflow-hidden
-                                        transition-all duration-300 hover:scale-105 hover:border-zinc-300 dark:hover:border-zinc-600
-                                    `}
-                                >
-                                    {/* Hover Glow Effect */}
-                                    <div className={`absolute inset-0 opacity-0 group-hover/item:opacity-20 transition-opacity duration-300 ${category.color}`} />
+                            {gameCategories.map((category, index) => {
+                                const logo = logoMap[category.name];
+                                return (
+                                    <div
+                                        key={index}
+                                        className={`
+                                            group/item relative flex items-center gap-3 px-5 py-2.5 
+                                            rounded-2xl bg-white dark:bg-zinc-900/50 
+                                            border border-zinc-200 dark:border-zinc-800 
+                                            backdrop-blur-sm cursor-pointer overflow-hidden
+                                            transition-all duration-300 hover:scale-105 hover:border-brand-primary/50 shadow-sm
+                                        `}
+                                    >
+                                        {/* Hover Glow Effect */}
+                                        <div className={`absolute inset-0 opacity-0 group-hover/item:opacity-5 transition-opacity duration-300 ${category.color}`} />
 
-                                    {/* Colored Dot/Indicator */}
-                                    <div className={`w-2 h-2 rounded-full ${category.color} shadow-[0_0_8px_currentColor]`} />
+                                        {/* Category Icon/Logo */}
+                                        {logo ? (
+                                            <div className="relative w-6 h-6 shrink-0 group-hover/item:scale-110 transition-transform">
+                                                <Image
+                                                    src={logo}
+                                                    alt={category.name}
+                                                    fill
+                                                    className="object-contain"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className={`w-2 h-2 rounded-full ${category.color} shadow-[0_0_8px_currentColor]`} />
+                                        )}
 
-                                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
-                                        {category.name}
-                                    </span>
-                                </div>
-                            ))}
+                                        <span className="text-sm font-bold text-zinc-900 dark:text-zinc-200">
+                                            {category.name}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </Marquee>
                     </div>
                 </div>

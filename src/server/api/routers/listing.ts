@@ -8,6 +8,7 @@ export const listingRouter = createTRPCRouter({
         .input(
             z.object({
                 limit: z.number().min(1).max(100).default(24),
+                page: z.number().min(1).default(1),
                 cursor: z.string().optional(),
                 type: z.enum(["FIXED", "AUCTION"]).optional(),
                 category: z.string().optional(),
@@ -18,7 +19,7 @@ export const listingRouter = createTRPCRouter({
             })
         )
         .query(async ({ ctx, input }) => {
-            const { limit, cursor, type, category, search, minPrice, maxPrice, sortBy } = input;
+            const { limit, page, cursor, type, category, search, minPrice, maxPrice, sortBy } = input;
 
             const where: any = {
                 status: "ACTIVE",
@@ -64,9 +65,12 @@ export const listingRouter = createTRPCRouter({
                     orderBy = { created_at: "desc" };
             }
 
+            // Get total count for pagination
+            const totalCount = await ctx.db.listing.count({ where });
+
             const listings = await ctx.db.listing.findMany({
-                take: limit + 1,
-                cursor: cursor ? { listing_id: cursor } : undefined,
+                take: limit,
+                skip: (page - 1) * limit,
                 where,
                 orderBy,
                 include: {
@@ -90,19 +94,14 @@ export const listingRouter = createTRPCRouter({
                 },
             });
 
-            let nextCursor: string | undefined = undefined;
-            if (listings.length > limit) {
-                const nextItem = listings.pop();
-                nextCursor = nextItem?.listing_id;
-            }
-
             return {
                 listings: listings.map(l => ({
                     ...l,
                     game: l.category.name,
                     bidCount: l._count.bids,
                 })),
-                nextCursor,
+                totalCount,
+                totalPages: Math.ceil(totalCount / limit),
             };
         }),
 
