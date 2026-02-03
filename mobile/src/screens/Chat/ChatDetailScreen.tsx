@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
     View,
     FlatList,
@@ -9,8 +9,11 @@ import {
     Alert,
 } from "react-native";
 import { Text, TextInput, IconButton, useTheme, Menu } from "react-native-paper";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, Stack } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import TransactionChatHeader, { TransactionStatus } from "../../components/TransactionChatHeader";
+import VerificationBanner from "../../components/VerificationBanner";
 
 interface Message {
     id: string;
@@ -56,11 +59,19 @@ const INITIAL_MESSAGES: Message[] = [
 
 export default function ChatDetailScreen() {
     const theme = useTheme();
-    useLocalSearchParams<{ id: string; username: string }>();
+    const { id, username, mockStatus } = useLocalSearchParams<{ id: string; username: string; mockStatus?: TransactionStatus }>();
     const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
     const [inputText, setInputText] = useState("");
     const [menuVisible, setMenuVisible] = useState(false);
     const flatListRef = useRef<FlatList>(null);
+    const insets = useSafeAreaInsets();
+
+    // Mock transaction data based on status
+    const transactionStatus = mockStatus as TransactionStatus;
+    const hasActiveTransaction = !!transactionStatus;
+
+    // Use a date 23 hours from now as mock deadline
+    const mockDeadline = new Date(Date.now() + 23 * 60 * 60 * 1000).toISOString();
 
     const sendMessage = (text?: string, image?: string) => {
         if (!text && !image) return;
@@ -168,16 +179,51 @@ export default function ChatDetailScreen() {
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         >
+            <Stack.Screen
+                options={{
+                    // Hide default header if showing transaction header
+                    headerShown: !hasActiveTransaction,
+                    title: username,
+                    headerBackTitle: "Back"
+                }}
+            />
+
+            {hasActiveTransaction && (
+                <View>
+                    <TransactionChatHeader
+                        partnerName={username}
+                        listingTitle="ML Account Mythic Glory"
+                        listingPrice={850000}
+                        status={transactionStatus}
+                    />
+                    {transactionStatus === "ITEM_TRANSFERRED" && (
+                        <VerificationBanner
+                            deadline={new Date(mockDeadline)}
+                            isBuyer={true} // Mock: we are the buyer
+                            onConfirmReceived={() => Alert.alert("Confirmed", "Funds released to seller!")}
+                            onReportIssue={() => Alert.alert("Report", "Opening dispute form...")}
+                        />
+                    )}
+                </View>
+            )}
+
             <FlatList
                 ref={flatListRef}
                 data={messages}
                 keyExtractor={(item) => item.id}
                 renderItem={renderMessage}
-                contentContainerStyle={styles.messagesList}
+                contentContainerStyle={[styles.messagesList, { paddingBottom: hasActiveTransaction ? 20 : 8 }]}
                 onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
             />
 
-            <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface }]}>
+            <View style={[
+                styles.inputContainer,
+                {
+                    backgroundColor: theme.colors.surface,
+                    // Use standard bottom inset spacing
+                    paddingBottom: insets.bottom > 0 ? insets.bottom : 16
+                }
+            ]}>
                 <Menu
                     visible={menuVisible}
                     onDismiss={() => setMenuVisible(false)}
