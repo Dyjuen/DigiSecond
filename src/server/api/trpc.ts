@@ -4,6 +4,7 @@ import superjson from "superjson";
 import { z } from "zod";
 import { db } from "../db";
 import { getServerAuthSession } from "../auth";
+import { verifyJWT } from "@/lib/jwt";
 
 /**
  * tRPC Context
@@ -20,8 +21,47 @@ export const createInnerTRPCContext = (opts: CreateContextOptions) => {
     };
 };
 
-export const createTRPCContext = async () => {
-    const session = await getServerAuthSession();
+/**
+ * Create tRPC context with authentication from either:
+ * 1. Session cookie (web clients) - NextAuth default
+ * 2. Authorization: Bearer header (mobile clients) - JWT fallback
+ * 
+ * This dual approach ensures:
+ * - Web frontend continues using cookie-based auth (unchanged)
+ * - Mobile app can send JWT tokens without cookies
+ */
+export const createTRPCContext = async (opts?: { headers?: Headers }) => {
+    // 1. Try session cookie first (existing web auth flow)
+    let session = await getServerAuthSession();
+
+    // 2. If no session, check for Authorization header (mobile JWT)
+    if (!session && opts?.headers) {
+        const authHeader = opts.headers.get("authorization");
+
+        if (authHeader?.startsWith("Bearer ")) {
+            const token = authHeader.slice(7); // Remove "Bearer " prefix
+            const decoded = verifyJWT(token);
+
+            if (decoded && !decoded.suspended) {
+                // Build session object from JWT payload
+                session = {
+                    user: {
+                        id: decoded.sub,
+                        email: decoded.email,
+                        role: decoded.role,
+                        tier: decoded.tier,
+                        verified: decoded.verified,
+                        suspended: decoded.suspended,
+                        name: null,
+                        image: null,
+                        phone: null,
+                    },
+                    expires: new Date(decoded.exp * 1000).toISOString(),
+                } as Session;
+            }
+        }
+    }
+
     return createInnerTRPCContext({ session });
 };
 

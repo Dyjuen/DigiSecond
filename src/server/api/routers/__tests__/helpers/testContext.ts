@@ -10,6 +10,9 @@ import { createInnerTRPCContext, type Context } from "@/server/api/trpc";
 import { appRouter } from "@/server/api/root";
 import { db } from "@/server/db";
 
+// Re-export for JWT integration tests
+export { createInnerTRPCContext };
+
 /**
  * Create a test context with optional session
  */

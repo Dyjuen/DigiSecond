@@ -91,13 +91,13 @@ Beyond the React version mismatch, there are also test code bugs that would need
 
 ## Mobile Authentication - Token Mismatch
 
-**Status**: Blocking (mobile cannot use protected endpoints)  
-**Severity**: High  
+**Status**: Resolved ✅  
+**Severity**: None (Fixed)  
 **Date Identified**: 2026-02-02  
-**Estimated Fix Time**: 2-3 hours
+**Date Resolved**: 2026-02-02
 
-> [!IMPORTANT]
-> This blocks all authenticated mobile functionality. Protected tRPC endpoints return UNAUTHORIZED for mobile clients.
+> [!NOTE]
+> Fixed by implementing dual authentication in tRPC context. Web clients use session cookies (NextAuth), while mobile clients use JWT Bearer tokens. See `src/lib/jwt.ts` and `src/app/api/auth/mobile/login/route.ts`.
 
 ### Problem
 
