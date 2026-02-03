@@ -241,14 +241,47 @@ Add to backend tests:
 
 ## Mobile Google OAuth - Expo Go Limitations
 
-**Status**: Blocking in Expo Go (works in production builds)  
-**Severity**: High (development only)  
-**Date Identified**: 2026-02-02
+**Status**: Resolved ✅  
+**Severity**: None (Fixed with Magic Link)  
+**Date Identified**: 2026-02-02  
+**Date Resolved**: 2026-02-03
 
-> [!WARNING]
-> Google OAuth fails in Expo Go with `disallowed_useragent` or `redirect_uri_mismatch`. This is Google security policy, not a bug.
+> [!NOTE]
+> Fixed by implementing Magic Link authentication flow. Users click email link → web page generates JWT → deep link opens mobile app with token. Works in Expo Go, production builds, and all environments.
 
-### Root Cause
+### Implementation
+
+The Magic Link flow works as follows:
+
+1. **Mobile**: User enters email, taps "Send Magic Link"
+2. **Backend**: NextAuth sends email with sign-in link
+3. **Email**: User clicks link → browser opens → NextAuth creates session
+4. **Web**: `/auth/mobile-callback` page generates JWT from session
+5. **Deep Link**: User taps "Open DigiSecond" → `digisecond://auth-callback?token=...`
+6. **Mobile**: `useDeepLinkAuth` hook captures token, stores in authStore, navigates to home
+
+**Files Created:**
+- [`/auth/mobile-callback/page.tsx`](file:///home/juen/Projects/DigiSecond/src/app/auth/mobile-callback/page.tsx) - Server component
+- [`/auth/mobile-callback/client.tsx`](file:///home/juen/Projects/DigiSecond/src/app/auth/mobile-callback/client.tsx) - Client component
+- [`useDeepLinkAuth.ts`](file:///home/juen/Projects/DigiSecond/mobile/src/hooks/useDeepLinkAuth.ts) - Deep link handler
+
+**Files Modified:**
+- [`app.json`](file:///home/juen/Projects/DigiSecond/mobile/app.json) - Added Android intent filters
+- [`_layout.tsx`](file:///home/juen/Projects/DigiSecond/mobile/app/_layout.tsx) - Integrated hook
+
+### Why This Works
+
+| Platform | OAuth Status | Magic Link Status |
+|----------|--------------|-------------------|
+| Expo Go | ❌ Fails (shared fingerprint) | ✅ Works |
+| Production builds | ✅ Works | ✅ Works |
+| Web | ✅ Works | ✅ Works |
+
+Magic Link bypasses OAuth entirely - no SHA-1 fingerprints, no custom schemes for OAuth callbacks, just email verification.
+
+---
+
+### Old Root Cause (For Reference)
 
 | Platform | OAuth Status | Why |
 |----------|--------------|-----|

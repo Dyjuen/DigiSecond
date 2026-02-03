@@ -21,7 +21,23 @@
                 "foregroundImage": "./assets/adaptive-icon.png",
                 "backgroundColor": "#22c55e"
             },
-            "package": "com.digisecond.app"
+            "package": "com.digisecond.app",
+            "intentFilters": [
+                {
+                    "action": "VIEW",
+                    "autoVerify": true,
+                    "data": [
+                        {
+                            "scheme": "digisecond",
+                            "host": "auth-callback"
+                        }
+                    ],
+                    "category": [
+                        "BROWSABLE",
+                        "DEFAULT"
+                    ]
+                }
+            ]
         },
         "web": {
             "bundler": "metro",

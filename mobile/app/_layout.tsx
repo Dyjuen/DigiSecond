@@ -6,10 +6,14 @@ import { PaperProvider } from "react-native-paper";
 import { lightTheme } from "../src/lib/theme";
 import { useEffect } from "react";
 import { Appearance } from "react-native";
+import { useDeepLinkAuth } from "../src/hooks/useDeepLinkAuth";
 
 export default function Layout() {
     const { isDarkMode, useSystemTheme, setTheme } = useThemeStore();
     const theme = isDarkMode ? darkTheme : lightTheme;
+
+    // Enable deep link authentication
+    useDeepLinkAuth();
 
     useEffect(() => {
         const subscription = Appearance.addChangeListener(({ colorScheme }) => {
