@@ -4,9 +4,11 @@ import { StatusBar } from "expo-status-bar";
 import { Stack } from "expo-router";
 import { PaperProvider } from "react-native-paper";
 import { lightTheme } from "../src/lib/theme";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Appearance } from "react-native";
 import { useDeepLinkAuth } from "../src/hooks/useDeepLinkAuth";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { api, createTRPCClient } from "../src/lib/api";
 
 export default function Layout() {
     const { isDarkMode, useSystemTheme, setTheme } = useThemeStore();
@@ -14,6 +16,17 @@ export default function Layout() {
 
     // Enable deep link authentication
     useDeepLinkAuth();
+
+    // Initialize React Query and tRPC
+    const [queryClient] = useState(() => new QueryClient({
+        defaultOptions: {
+            queries: {
+                retry: 2,
+                staleTime: 1000 * 60 * 5, // 5 minutes
+            },
+        },
+    }));
+    const [trpcClient] = useState(() => createTRPCClient(null)); // No auth for public APIs
 
     useEffect(() => {
         const subscription = Appearance.addChangeListener(({ colorScheme }) => {
@@ -30,26 +43,30 @@ export default function Layout() {
     }, [useSystemTheme, setTheme]);
 
     return (
-        <PaperProvider theme={theme}>
-            <StatusBar style={isDarkMode ? "light" : "dark"} />
-            <Stack
-                screenOptions={{
-                    headerStyle: {
-                        backgroundColor: theme.colors.surface,
-                    },
-                    headerTintColor: theme.colors.onSurface,
-                    headerTitleStyle: {
-                        fontWeight: "bold",
-                    },
-                }}
-            >
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="index" options={{ title: "DigiSecond" }} />
-                <Stack.Screen name="login" options={{ title: "Login", headerShown: false }} />
-                <Stack.Screen name="search" options={{ headerShown: false, animation: 'none' }} />
-                <Stack.Screen name="listing/[id]" options={{ title: "Listing Details" }} />
-                <Stack.Screen name="chat/[id]" options={{ title: "Chat" }} />
-            </Stack>
-        </PaperProvider>
+        <api.Provider client={trpcClient} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+                <PaperProvider theme={theme}>
+                    <StatusBar style={isDarkMode ? "light" : "dark"} />
+                    <Stack
+                        screenOptions={{
+                            headerStyle: {
+                                backgroundColor: theme.colors.surface,
+                            },
+                            headerTintColor: theme.colors.onSurface,
+                            headerTitleStyle: {
+                                fontWeight: "bold",
+                            },
+                        }}
+                    >
+                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                        <Stack.Screen name="index" options={{ title: "DigiSecond" }} />
+                        <Stack.Screen name="login" options={{ title: "Login", headerShown: false }} />
+                        <Stack.Screen name="search" options={{ headerShown: false, animation: 'none' }} />
+                        <Stack.Screen name="listing/[id]" options={{ title: "Listing Details" }} />
+                        <Stack.Screen name="chat/[id]" options={{ title: "Chat" }} />
+                    </Stack>
+                </PaperProvider>
+            </QueryClientProvider>
+        </api.Provider>
     );
 }

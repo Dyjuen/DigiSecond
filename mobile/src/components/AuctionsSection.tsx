@@ -1,35 +1,39 @@
 import React from "react";
-import { View, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { AuctionCard } from "./AuctionCard";
+import { api } from "../lib/api";
+import { useAuctionCountdown } from "../hooks/useAuctionCountdown";
 
-// Mock Data
-const AUCTIONS = [
-    {
-        id: "a1",
-        title: "Rare Genshin UID 8000...",
-        currentBid: 550000,
-        timeLeft: "02:15:30",
-        image: "https://picsum.photos/400/300?random=20",
-    },
-    {
-        id: "a2",
-        title: "Valorant Knife Collection",
-        currentBid: 1200000,
-        timeLeft: "00:45:10",
-        image: "https://picsum.photos/400/300?random=21",
-    },
-    {
-        id: "a3",
-        title: "MLBB Savage Account",
-        currentBid: 300000,
-        timeLeft: "05:00:00",
-        image: "https://picsum.photos/400/300?random=22",
-    },
-];
+// Separate component to use hook per auction
+function AuctionItem({ auction }: { auction: any }) {
+    const { timeLeft, isUrgent } = useAuctionCountdown(auction.auction_ends_at);
+
+    return (
+        <AuctionCard
+            id={auction.listing_id}
+            title={auction.title}
+            currentBid={auction.current_bid || auction.price}
+            timeLeft={timeLeft}
+            imageUrl="https://via.placeholder.com/400x300"
+            onPress={() => console.log(`Pressed Auction ${auction.listing_id}`)}
+            isUrgent={isUrgent}
+        />
+    );
+}
 
 export function AuctionsSection() {
     const theme = useTheme();
+
+    // Fetch auction listings from API
+    const { data, isLoading } = api.listing.getAll.useQuery({
+        type: "AUCTION",
+        sortBy: "newest",
+        limit: 6,
+        page: 1,
+    });
+
+    const auctions = data?.listings || [];
 
     return (
         <View style={styles.container}>
@@ -44,17 +48,17 @@ export function AuctionsSection() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {AUCTIONS.map((auction) => (
-                    <AuctionCard
-                        key={auction.id}
-                        id={auction.id}
-                        title={auction.title}
-                        currentBid={auction.currentBid}
-                        timeLeft={auction.timeLeft}
-                        imageUrl={auction.image}
-                        onPress={() => console.log(`Pressed Auction ${auction.id}`)}
-                    />
-                ))}
+                {isLoading ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginLeft: 16 }} />
+                ) : auctions.length === 0 ? (
+                    <Text variant="bodyMedium" style={{ marginLeft: 16, color: theme.colors.onSurfaceVariant }}>
+                        Tidak ada lelang aktif
+                    </Text>
+                ) : (
+                    auctions.map((auction) => (
+                        <AuctionItem key={auction.listing_id} auction={auction} />
+                    ))
+                )}
             </ScrollView>
         </View>
     );

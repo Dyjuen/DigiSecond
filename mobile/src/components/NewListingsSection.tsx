@@ -1,19 +1,22 @@
 import React from "react";
-import { View, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { ListingCard } from "./ListingCard";
 import { useRouter } from "expo-router";
-
-import { useListingStore, CURRENT_USER_ID } from "../stores/listingStore";
-
+import { api } from "../lib/api";
 
 export function NewListingsSection() {
-    // Filter out own listings
-    const listings = useListingStore((state) =>
-        state.listings.filter(l => l.sellerId !== CURRENT_USER_ID)
-    );
     const theme = useTheme();
     const router = useRouter();
+
+    // Fetch new listings from API
+    const { data, isLoading } = api.listing.getAll.useQuery({
+        sortBy: "newest",
+        limit: 6,
+        page: 1,
+    });
+
+    const listings = data?.listings || [];
 
     return (
         <View style={styles.container}>
@@ -28,17 +31,25 @@ export function NewListingsSection() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {listings.map((item) => (
-                    <ListingCard
-                        key={item.id}
-                        id={item.id}
-                        title={item.title}
-                        price={item.price}
-                        imageUrl={item.imageUrl}
-                        onPress={() => router.push(`/listing/${item.id}`)}
-                        style={styles.card}
-                    />
-                ))}
+                {isLoading ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginLeft: 16 }} />
+                ) : listings.length === 0 ? (
+                    <Text variant="bodyMedium" style={{ marginLeft: 16, color: theme.colors.onSurfaceVariant }}>
+                        Tidak ada listing baru
+                    </Text>
+                ) : (
+                    listings.map((item) => (
+                        <ListingCard
+                            key={item.listing_id}
+                            id={item.listing_id}
+                            title={item.title}
+                            price={item.price}
+                            imageUrl="https://via.placeholder.com/400x300"
+                            onPress={() => router.push(`/listing/${item.listing_id}`)}
+                            style={styles.card}
+                        />
+                    ))
+                )}
             </ScrollView>
         </View>
     );

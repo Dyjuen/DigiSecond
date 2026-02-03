@@ -2,54 +2,35 @@ import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView, Image } from "react-native";
 import { Text, Button, Card, Avatar, Divider, useTheme } from "react-native-paper";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import { useListingStore, CURRENT_USER_ID } from "../../stores/listingStore";
 import { Skeleton } from "../../components/Skeleton";
 import { shadows } from "../../lib/theme";
 import { Alert } from "react-native";
+import { api } from "../../lib/api";
 
 export default function ListingDetailScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
     const theme = useTheme();
-    const [loading, setLoading] = useState(true);
-    const listing = useListingStore((state) => state.listings.find((l) => l.id === id));
-    const deleteListing = useListingStore((state) => state.deleteListing);
-    const isOwner = listing?.sellerId === CURRENT_USER_ID;
 
-    useEffect(() => {
-        // Simulate fetching data for Skeleton effect
-        if (listing) {
-            setTimeout(() => setLoading(false), 500);
-        } else {
-            setLoading(false);
-        }
-    }, [listing]);
+    // Fetch listing from API
+    const { data: listing, isLoading, error } = api.listing.getById.useQuery(
+        { id: id as string },
+        { enabled: !!id }
+    );
+
+    const isOwner = false; // TODO: Check against actual user ID when auth is implemented
 
     const handleDelete = () => {
-        Alert.alert(
-            "Delete Listing",
-            "Are you sure you want to delete this listing?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: () => {
-                        if (typeof id === 'string') {
-                            deleteListing(id);
-                            router.back();
-                        }
-                    }
-                }
-            ]
-        );
+        // TODO: Will use api.listing.delete.useMutation() when auth is implemented
+        Alert.alert("Not Implemented", "Delete requires authentication");
     };
 
     const handleEdit = () => {
+        // TODO: Navigate to edit screen when auth is implemented
         router.push(`/listing/create?id=${id}`);
     };
 
-    if (loading) {
+    if (isLoading) {
         return (
             <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
                 <Stack.Screen options={{ title: "Loading...", headerBackTitle: "Back" }} />
@@ -70,11 +51,12 @@ export default function ListingDetailScreen() {
         );
     }
 
-    if (!listing) {
+    if (error || !listing) {
         return (
             <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
                 <Stack.Screen options={{ title: "Not Found", headerBackTitle: "Back" }} />
-                <Text variant="headlineMedium">Listing not found</Text>
+                <Text variant="headlineMedium">{error ? "Error loading listing" : "Listing not found"}</Text>
+                {error && <Text variant="bodyMedium" style={{ marginTop: 8, color: theme.colors.error }}>{error.message}</Text>}
             </View>
         );
     }
@@ -85,11 +67,14 @@ export default function ListingDetailScreen() {
         minimumFractionDigits: 0,
     }).format(listing.price);
 
+    // Get first photo or use placeholder
+    const imageUrl = 'https://via.placeholder.com/400x300'; // TODO: Backend needs to include photos in response
+
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <Stack.Screen options={{ title: "Details", headerBackTitle: "Back" }} />
             <ScrollView>
-                <Image source={{ uri: listing.imageUrl }} style={[styles.image, { backgroundColor: theme.colors.surfaceVariant }]} alt={listing.title} />
+                <Image source={{ uri: imageUrl }} style={[styles.image, { backgroundColor: theme.colors.surfaceVariant }]} alt={listing.title} />
 
                 <View style={styles.content}>
                     <Text variant="headlineSmall" style={styles.title}>
@@ -101,10 +86,16 @@ export default function ListingDetailScreen() {
 
                     <Card style={[styles.sellerCard, shadows.shadowCard]}>
                         <Card.Content style={styles.sellerContent}>
-                            <Avatar.Text size={40} label="S" style={{ backgroundColor: theme.colors.secondaryContainer }} />
+                            <Avatar.Text
+                                size={40}
+                                label={listing.seller.name.charAt(0).toUpperCase()}
+                                style={{ backgroundColor: theme.colors.secondaryContainer }}
+                            />
                             <View style={styles.sellerInfo}>
-                                <Text variant="titleMedium">Seller Name</Text>
-                                <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>Verified Seller</Text>
+                                <Text variant="titleMedium">{listing.seller.name}</Text>
+                                <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
+                                    {listing.seller.is_verified ? "Verified Seller" : "Seller"}
+                                </Text>
                             </View>
                             <Button mode="text" style={{ marginLeft: "auto" }}>View</Button>
                         </Card.Content>
@@ -139,7 +130,7 @@ export default function ListingDetailScreen() {
                         </Button>
                     </View>
                 ) : (
-                    <Button mode="contained" onPress={() => alert("Proceed to Payment")} contentStyle={{ paddingVertical: 8 }} style={{ marginTop: 0 }}>
+                    <Button mode="contained" onPress={() => alert("Login required to purchase")} contentStyle={{ paddingVertical: 8 }} style={{ marginTop: 0 }}>
                         Buy Now
                     </Button>
                 )}

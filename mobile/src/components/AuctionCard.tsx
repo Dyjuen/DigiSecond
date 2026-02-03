@@ -11,9 +11,10 @@ interface AuctionCardProps {
     timeLeft: string;
     imageUrl: string;
     onPress: () => void;
+    isUrgent?: boolean;
 }
 
-export function AuctionCard({ title, currentBid, timeLeft, imageUrl, onPress }: AuctionCardProps) {
+export function AuctionCard({ title, currentBid, timeLeft, imageUrl, onPress, isUrgent = false }: AuctionCardProps) {
     const theme = useTheme();
 
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -64,9 +65,23 @@ export function AuctionCard({ title, currentBid, timeLeft, imageUrl, onPress }: 
                             {formattedBid}
                         </Text>
                     </View>
-                    <View style={[styles.timeContainer, { backgroundColor: theme.colors.secondaryContainer }]}>
-                        <MaterialCommunityIcons name="clock-outline" size={14} color={theme.colors.onSecondaryContainer} />
-                        <Text variant="labelSmall" style={{ color: theme.colors.onSecondaryContainer, marginLeft: 4 }}>
+                    <View style={[
+                        styles.timeContainer,
+                        { backgroundColor: isUrgent ? theme.colors.errorContainer : theme.colors.secondaryContainer }
+                    ]}>
+                        <MaterialCommunityIcons
+                            name="clock-outline"
+                            size={14}
+                            color={isUrgent ? theme.colors.onErrorContainer : theme.colors.onSecondaryContainer}
+                        />
+                        <Text
+                            variant="labelSmall"
+                            style={{
+                                color: isUrgent ? theme.colors.onErrorContainer : theme.colors.onSecondaryContainer,
+                                marginLeft: 4,
+                                fontWeight: isUrgent ? 'bold' : 'normal'
+                            }}
+                        >
                             {timeLeft}
                         </Text>
                     </View>

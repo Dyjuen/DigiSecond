@@ -1,21 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { View, FlatList, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager, ActivityIndicator } from 'react-native';
 import { Searchbar, useTheme, Text, Button, Badge } from 'react-native-paper';
 import { HomeHeader } from '../../components/HomeHeader';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useListingStore, FilterOptions } from '../../stores/listingStore';
+import { FilterOptions } from '../../stores/listingStore';
 import { ListingCard } from '../../components/ListingCard';
 import { FilterModal } from '../../components/FilterModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { api } from '../../lib/api';
 
 export default function SearchScreen() {
     const theme = useTheme();
     const router = useRouter();
     const params = useLocalSearchParams();
-
-    // Store State
-    const { getFilteredListings } = useListingStore();
 
     // UI State
     const [searchQuery, setSearchQuery] = useState('');
@@ -47,10 +45,16 @@ export default function SearchScreen() {
         };
     }, [searchQuery]);
 
-    // Derived Listings (depends on DEBOUNCED query)
-    const filteredListings = useMemo(() => {
-        return getFilteredListings(debouncedSearchQuery, filters);
-    }, [debouncedSearchQuery, filters, getFilteredListings]);
+    // Fetch listings from API
+    const { data, isLoading, error } = api.listing.getAll.useQuery({
+        search: debouncedSearchQuery || undefined,
+        category: filters.category?.[0], // Backend takes single string
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        sortBy: filters.sortBy || 'newest',
+        limit: 50,
+        page: 1,
+    });
 
     // Derived: Active Filter Count
     const activeFilterCount = useMemo(() => {
@@ -198,29 +202,42 @@ export default function SearchScreen() {
             </View>
 
             {/* Results */}
-            <FlatList
-                data={filteredListings}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                    <ListingCard
-                        id={item.id}
-                        title={item.title}
-                        price={item.price}
-                        imageUrl={item.imageUrl}
-                        onPress={() => router.push(`/listing/${item.id}`)}
-                        style={styles.card}
-                    />
-                )}
-                numColumns={2}
-                contentContainerStyle={styles.listContent}
-                columnWrapperStyle={styles.columnWrapper}
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <MaterialCommunityIcons name="emoticon-sad-outline" size={48} color={theme.colors.outline} />
-                        <Text style={{ marginTop: 16, color: theme.colors.onBackground, fontWeight: '500' }}>Tidak ada hasil ditemukan</Text>
-                    </View>
-                }
-            />
+            {isLoading ? (
+                <View style={styles.centerContainer}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                    <Text style={{ marginTop: 16, color: theme.colors.onSurfaceVariant }}>Memuat...</Text>
+                </View>
+            ) : error ? (
+                <View style={styles.centerContainer}>
+                    <MaterialCommunityIcons name="alert-circle-outline" size={48} color={theme.colors.error} />
+                    <Text style={{ marginTop: 16, color: theme.colors.error }}>Gagal memuat data</Text>
+                    <Text style={{ marginTop: 8, color: theme.colors.onSurfaceVariant }}>{error.message}</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={data?.listings || []}
+                    keyExtractor={(item) => item.listing_id}
+                    renderItem={({ item }) => (
+                        <ListingCard
+                            id={item.listing_id}
+                            title={item.title}
+                            price={item.price}
+                            imageUrl={'https://via.placeholder.com/400x300'}
+                            onPress={() => router.push(`/listing/${item.listing_id}`)}
+                            style={styles.card}
+                        />
+                    )}
+                    numColumns={2}
+                    contentContainerStyle={styles.listContent}
+                    columnWrapperStyle={styles.columnWrapper}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <MaterialCommunityIcons name="emoticon-sad-outline" size={48} color={theme.colors.outline} />
+                            <Text style={{ marginTop: 16, color: theme.colors.onBackground, fontWeight: '500' }}>Tidak ada hasil ditemukan</Text>
+                        </View>
+                    }
+                />
+            )}
 
             <FilterModal
                 visible={isFilterVisible}
@@ -289,6 +306,12 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     emptyContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 100,
+    },
+    centerContainer: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
