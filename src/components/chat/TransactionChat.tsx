@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "motion/react";
+import Image from "next/image";
 
 // Transaction status types
 export type TransactionStatus =
@@ -227,7 +228,13 @@ export function TransactionChat(props: TransactionChatProps) {
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary to-purple-600 flex items-center justify-center text-white font-bold overflow-hidden relative">
                                         {(seller.avatar.startsWith("http") || seller.avatar.startsWith("/")) ? (
-                                            <img src={seller.avatar} alt={seller.name} className="w-full h-full object-cover" />
+                                            <Image
+                                                src={seller.avatar}
+                                                alt={seller.name}
+                                                className="object-cover"
+                                                fill
+                                                unoptimized
+                                            />
                                         ) : (
                                             seller.name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()
                                         )}
@@ -250,9 +257,15 @@ export function TransactionChat(props: TransactionChatProps) {
                             {/* Transaction Status Banner */}
                             <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-2xl flex items-center justify-center w-8 h-8 overflow-hidden rounded-md">
+                                    <span className="text-2xl flex items-center justify-center w-8 h-8 overflow-hidden rounded-md relative">
                                         {(listing.image.startsWith("http") || listing.image.startsWith("/")) ? (
-                                            <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" />
+                                            <Image
+                                                src={listing.image}
+                                                alt={listing.title}
+                                                className="object-cover"
+                                                fill
+                                                unoptimized
+                                            />
                                         ) : (
                                             listing.image
                                         )}

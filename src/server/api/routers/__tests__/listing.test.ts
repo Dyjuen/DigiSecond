@@ -209,13 +209,11 @@ describe("Listing Router", () => {
 
             const caller = createTestCaller(createUnauthenticatedContext());
             const result = await caller.listing.getById({ id: listing.listing_id });
-            expect(result).not.toBeNull();
-            if (result) {
-                expect(result.listing_id).toBe(listing.listing_id);
-                expect(result.title).toBe("Test Listing GetById");
-                expect(result.seller).toBeDefined();
-                expect(result.seller.name).toBeDefined();
-            }
+
+            expect(result?.listing_id).toBe(listing.listing_id);
+            expect(result?.title).toBe("Test Listing GetById");
+            expect(result?.seller).toBeDefined();
+            expect(result?.seller.name).toBeDefined();
         });
 
         it("should return null for non-existent listing", async () => {
@@ -242,11 +240,9 @@ describe("Listing Router", () => {
 
             const caller = createTestCaller(createUnauthenticatedContext());
             const result = await caller.listing.getById({ id: listing.listing_id });
-            expect(result).not.toBeNull();
-            if (result) {
-                expect(result.bidCount).toBeDefined();
-                expect(typeof result.bidCount).toBe("number");
-            }
+
+            expect(result?.bidCount).toBeDefined();
+            expect(typeof result?.bidCount).toBe("number");
         });
     });
 
