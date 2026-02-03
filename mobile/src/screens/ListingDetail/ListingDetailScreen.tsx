@@ -1,16 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, Image } from "react-native";
-import { Text, Button, Card, Avatar, Divider, useTheme } from "react-native-paper";
+import { Text, Button, Card, Avatar, Divider, useTheme, IconButton } from "react-native-paper";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { Skeleton } from "../../components/Skeleton";
 import { shadows } from "../../lib/theme";
 import { Alert } from "react-native";
 import { api } from "../../lib/api";
+import PurchaseSheet from "../../components/PurchaseSheet";
+import PaymentInstructionsSheet from "../../components/PaymentInstructionsSheet";
 
 export default function ListingDetailScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
     const theme = useTheme();
+
+    // Sheet visibility states
+    const [isPurchaseSheetVisible, setPurchaseSheetVisible] = useState(false);
+    const [isPaymentSheetVisible, setPaymentSheetVisible] = useState(false);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"VA" | "EWALLET" | "QRIS">("VA");
 
     // Fetch listing from API
     const { data: listing, isLoading, error } = api.listing.getById.useQuery(
@@ -28,6 +35,29 @@ export default function ListingDetailScreen() {
     const handleEdit = () => {
         // TODO: Navigate to edit screen when auth is implemented
         router.push(`/listing/create?id=${id}`);
+    };
+
+    const handlePurchaseConfirm = (method: "VA" | "EWALLET" | "QRIS") => {
+        setSelectedPaymentMethod(method);
+        setPurchaseSheetVisible(false);
+        // Small delay for smooth transition
+        setTimeout(() => setPaymentSheetVisible(true), 300);
+    };
+
+    const handlePaymentComplete = () => {
+        setPaymentSheetVisible(false);
+        // In real app: Navigate to specific chat ID
+        // For prototype: Go to chats tab
+        Alert.alert(
+            "Success",
+            "Payment confirmed! Redirecting to chat...",
+            [
+                {
+                    text: "OK",
+                    onPress: () => router.push("/(tabs)/chat")
+                }
+            ]
+        );
     };
 
     if (isLoading) {
@@ -130,11 +160,50 @@ export default function ListingDetailScreen() {
                         </Button>
                     </View>
                 ) : (
-                    <Button mode="contained" onPress={() => alert("Login required to purchase")} contentStyle={{ paddingVertical: 8 }} style={{ marginTop: 0 }}>
-                        Buy Now
-                    </Button>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                        <Button
+                            mode="contained"
+                            onPress={() => setPurchaseSheetVisible(true)}
+                            contentStyle={{ paddingVertical: 8 }}
+                            style={{ flex: 1, marginTop: 0 }}
+                        >
+                            Buy Now
+                        </Button>
+                        <IconButton
+                            icon="chat"
+                            mode="contained"
+                            containerColor={theme.colors.secondaryContainer}
+                            iconColor={theme.colors.onSecondaryContainer}
+                            size={24}
+                            onPress={() => {
+                                // Navigate to chat tab for now
+                                router.push("/(tabs)/chat");
+                            }}
+                        />
+                    </View>
                 )}
             </View>
+
+            {/* Sheets */}
+            <PurchaseSheet
+                visible={isPurchaseSheetVisible}
+                onDismiss={() => setPurchaseSheetVisible(false)}
+                listing={{
+                    id: listing.id,
+                    title: listing.title,
+                    price: listing.price,
+                    sellerName: listing.seller.name
+                }}
+                onConfirm={handlePurchaseConfirm}
+            />
+
+            <PaymentInstructionsSheet
+                visible={isPaymentSheetVisible}
+                onDismiss={() => setPaymentSheetVisible(false)}
+                amount={listing.price}
+                paymentMethod={selectedPaymentMethod}
+                onPaymentComplete={handlePaymentComplete}
+            />
         </View>
     );
 }
