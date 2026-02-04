@@ -125,9 +125,19 @@ export default function AdminDashboard() {
             icon: Scale,
             color: "text-rose-600 dark:text-rose-400",
             bgColor: "bg-rose-100 dark:bg-rose-900/30",
-            trend: dashboardStats?.openDisputes && dashboardStats.openDisputes > 0 ? "down" : "up"
+            trend: dashboardStats?.openDisputes && dashboardStats.openDisputes > 0 ? "down" : "up",
+            href: "/admin/disputes"
         },
-    ] as (typeof stats[0] & { href?: string })[];
+    ] as {
+        title: string;
+        value: string;
+        change: string;
+        icon: typeof Users;
+        color: string;
+        bgColor: string;
+        trend: string;
+        href?: string;
+    }[];
 
     // Chart data
     const transactionChartData = {

@@ -6,34 +6,44 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useTheme } from "next-themes";
-import Counter from "@/components/ui/Counter";
 import { Aurora } from "@/components/effects/Aurora";
 import { GlowCard } from "@/components/ui/spotlight-card";
+import { api } from "@/trpc/react";
 import {
     ShoppingBag,
     CheckCircle,
     Clock,
-    CreditCard,
-    DollarSign,
     TrendingUp,
     Settings,
     PlusCircle,
     Gavel,
-    Shield
+    Shield,
+    Package,
+    MessageSquare
 } from "lucide-react";
 
 export default function DashboardPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const { theme, resolvedTheme } = useTheme();
+    const { resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
     const user = session?.user;
+
+    // Real API queries
+    const { data: activeTransactionsData } = api.transaction.getActive.useQuery(
+        {},
+        { enabled: !!user }
+    );
+
+    const { data: userListings } = api.listing.getByUser.useQuery(
+        {},
+        { enabled: !!user && (user?.role === "SELLER" || user?.role === "ADMIN") }
+    );
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    // Redirect to login if not authenticated
     useEffect(() => {
         if (status === "unauthenticated") {
             router.push("/login");
@@ -49,6 +59,19 @@ export default function DashboardPage() {
     }
 
     if (!user) return null;
+
+    // Calculate real stats from API data
+    const transactions = activeTransactionsData?.transactions || [];
+    const inProgressCount = transactions.filter(t =>
+        ["PENDING_PAYMENT", "PAID", "ITEM_TRANSFERRED"].includes(t.status)
+    ).length;
+    const completedCount = transactions.filter(t => t.status === "COMPLETED").length;
+    const totalSpent = transactions
+        .filter(t => t.status === "COMPLETED" && t.buyer_id === user.id)
+        .reduce((sum, t) => sum + Number(t.transaction_amount), 0);
+    const totalEarned = transactions
+        .filter(t => t.status === "COMPLETED" && t.seller_id === user.id)
+        .reduce((sum, t) => sum + Number(t.transaction_amount), 0);
 
     const quickActions: {
         title: string;
@@ -67,10 +90,10 @@ export default function DashboardPage() {
                 glow: "blue"
             },
             {
-                title: "Lelang Aktif",
-                description: "Ikuti Bidding",
-                href: "/lelang",
-                icon: <Gavel className="w-6 h-6" />,
+                title: "Transaksi Saya",
+                description: `${inProgressCount} Aktif`,
+                href: "/transactions",
+                icon: <Package className="w-6 h-6" />,
                 color: "orange",
                 glow: "orange"
             },
@@ -101,14 +124,35 @@ export default function DashboardPage() {
         prefix?: string;
         color: "blue" | "green" | "orange" | "purple";
     }[] = [
-            { label: "Total Pembelian", value: 0, prefix: "Rp", color: "blue" },
-            { label: "Transaksi Sukses", value: 0, color: "green" },
-            { label: "Dalam Proses", value: 1, color: "orange" },
+            { label: "Total Pembelian", value: totalSpent, prefix: "Rp", color: "blue" },
+            { label: "Transaksi Sukses", value: completedCount, color: "green" },
+            { label: "Dalam Proses", value: inProgressCount, color: "orange" },
         ];
 
-    if (user.role === "SELLER") {
-        stats.push({ label: "Total Penjualan", value: 0, prefix: "Rp", color: "blue" });
+    if (user.role === "SELLER" || user.role === "ADMIN") {
+        stats.push({ label: "Total Penjualan", value: totalEarned, prefix: "Rp", color: "purple" });
     }
+
+    // Build recent activity from real transactions
+    const recentActivity = transactions.slice(0, 3).map(t => ({
+        id: t.transaction_id,
+        title: t.status === "COMPLETED" ? "Transaksi Selesai" :
+            t.status === "PAID" ? "Pembayaran Diterima" :
+                t.status === "ITEM_TRANSFERRED" ? "Item Dikirim" :
+                    t.status === "PENDING_PAYMENT" ? "Menunggu Pembayaran" : "Transaksi Baru",
+        description: t.listing?.title || "Item",
+        time: new Date(t.created_at).toLocaleDateString("id-ID"),
+        isActive: ["PENDING_PAYMENT", "PAID", "ITEM_TRANSFERRED"].includes(t.status)
+    }));
+
+    // Add login activity
+    recentActivity.push({
+        id: "login",
+        title: "Login Berhasil",
+        description: "Selamat datang kembali!",
+        time: "Baru saja",
+        isActive: true
+    });
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-16 relative overflow-hidden">
@@ -187,7 +231,6 @@ export default function DashboardPage() {
                                                 </span>
                                             </div>
                                         </div>
-                                        {/* Decorative background element */}
                                         <div className={`absolute -right-6 -bottom-6 w-24 h-24 bg-${stat.color}-500/5 rounded-full blur-3xl group-hover:bg-${stat.color}-500/10 transition-colors`} />
                                     </GlowCard>
                                 </motion.div>
@@ -225,30 +268,20 @@ export default function DashboardPage() {
 
                         {/* Recent Activity */}
                         <div className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8">
-                            <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-8">Recent Activity</h2>
+                            <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-8">Aktivitas Terbaru</h2>
                             <div className="space-y-8 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200 dark:before:bg-zinc-800">
-                                {/* Timeline Item 1 */}
-                                <div className="relative pl-12 group">
-                                    <div className="absolute left-0 top-1 w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 border-4 border-white dark:border-black flex items-center justify-center z-10 group-hover:scale-110 transition-transform">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-brand-primary" />
+                                {recentActivity.map((activity, i) => (
+                                    <div key={activity.id} className="relative pl-12 group">
+                                        <div className="absolute left-0 top-1 w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 border-4 border-white dark:border-black flex items-center justify-center z-10 group-hover:scale-110 transition-transform">
+                                            <div className={`w-2.5 h-2.5 rounded-full ${activity.isActive ? "bg-brand-primary" : "bg-zinc-400"}`} />
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                            <p className="font-semibold text-zinc-900 dark:text-white">{activity.title}</p>
+                                            <span className="text-xs font-medium text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-full">{activity.time}</span>
+                                        </div>
+                                        <p className="text-sm text-zinc-500 mt-1">{activity.description}</p>
                                     </div>
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                                        <p className="font-semibold text-zinc-900 dark:text-white">Login Successful</p>
-                                        <span className="text-xs font-medium text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-full">Just now</span>
-                                    </div>
-                                    <p className="text-sm text-zinc-500 mt-1">Successfully accessed the dashboard.</p>
-                                </div>
-                                {/* Timeline Item 2 */}
-                                <div className="relative pl-12 group">
-                                    <div className="absolute left-0 top-1 w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 border-4 border-white dark:border-black flex items-center justify-center z-10 group-hover:scale-110 transition-transform">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-zinc-400" />
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                                        <p className="font-semibold text-zinc-900 dark:text-white">Account Created</p>
-                                        <span className="text-xs font-medium text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-full">2026-01-20</span>
-                                    </div>
-                                    <p className="text-sm text-zinc-500 mt-1">Welcome to the DigiSecond family!</p>
-                                </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -280,13 +313,13 @@ export default function DashboardPage() {
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between text-sm text-zinc-400">
-                                        <span>Listing Quota</span>
-                                        <span className="text-white">{user.tier === "FREE" ? "3/5" : "Unlimited"}</span>
+                                        <span>Listing Aktif</span>
+                                        <span className="text-white">{userListings?.listings?.length || 0}</span>
                                     </div>
                                     <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-brand-primary rounded-full"
-                                            style={{ width: user.tier === "FREE" ? "60%" : "100%" }}
+                                            style={{ width: user.tier === "FREE" ? `${Math.min(((userListings?.listings?.length || 0) / 5) * 100, 100)}%` : "100%" }}
                                         />
                                     </div>
                                     <Link href="/profile" className="block mt-6">
@@ -320,7 +353,7 @@ export default function DashboardPage() {
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-zinc-500">Listing Quota</span>
                                     <span className="font-medium text-zinc-900 dark:text-white">
-                                        {user.tier === "FREE" ? "3/5" : "Unlimited"}
+                                        {user.tier === "FREE" ? `${userListings?.listings?.length || 0}/5` : "Unlimited"}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
@@ -354,9 +387,11 @@ export default function DashboardPage() {
                                 </div>
                                 <h3 className="font-bold text-zinc-900 dark:text-white mb-1">Upgrade to Pro</h3>
                                 <p className="text-sm text-zinc-500 mb-4">Get unlimited listings and lower fees.</p>
-                                <button className="w-full py-2.5 text-sm font-bold text-orange-600 bg-orange-500/10 rounded-xl hover:bg-orange-500 hover:text-white transition-all">
-                                    Upgrade Now
-                                </button>
+                                <Link href="/dashboard/pricing">
+                                    <button className="w-full py-2.5 text-sm font-bold text-orange-600 bg-orange-500/10 rounded-xl hover:bg-orange-500 hover:text-white transition-all">
+                                        Upgrade Now
+                                    </button>
+                                </Link>
                             </GlowCard>
                         )}
                     </div>

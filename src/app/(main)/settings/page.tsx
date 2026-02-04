@@ -5,25 +5,76 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "motion/react";
+import { api } from "@/trpc/react";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
-    const { data: session, status } = useSession();
+    const { data: session, status, update: updateSession } = useSession();
     const router = useRouter();
     const user = session?.user;
 
     const [activeTab, setActiveTab] = useState("account");
 
-    // Redirect to login if not authenticated
+    // Form state
+    const [name, setName] = useState(user?.name ?? "");
+    const [phone, setPhone] = useState("");
+
+    // Update form when user data loads
+    useEffect(() => {
+        if (user?.name) setName(user.name);
+    }, [user?.name]);
+
+    // User update mutation
+    const updateUser = api.user.update.useMutation({
+        onSuccess: async () => {
+            toast.success("Profil berhasil diperbarui!");
+            await updateSession(); // Refresh session data
+        },
+        onError: (error) => {
+            toast.error(error.message || "Gagal menyimpan perubahan");
+        }
+    });
+
+    // Delete account mutation
+    const deleteAccount = api.user.deleteAccount.useMutation({
+        onSuccess: async () => {
+            toast.success("Akun berhasil dihapus");
+            await signOut({ callbackUrl: "/" });
+        },
+        onError: (error) => {
+            toast.error(error.message || "Gagal menghapus akun");
+        }
+    });
+
     useEffect(() => {
         if (status === "unauthenticated") {
-            router.push("/login"); // Fixed: Redirect to login
+            router.push("/login");
         }
     }, [status, router]);
 
     if (!user) return null;
 
     const handleLogout = async () => {
-        await signOut({ callbackUrl: "/" }); // Fixed: Use next-auth signOut
+        await signOut({ callbackUrl: "/" });
+    };
+
+    const handleSave = () => {
+        const updates: { name?: string; phone?: string } = {};
+        if (name !== user.name) updates.name = name;
+        if (phone && phone.length >= 11) updates.phone = phone;
+
+        if (Object.keys(updates).length === 0) {
+            toast.info("Tidak ada perubahan untuk disimpan");
+            return;
+        }
+
+        updateUser.mutate(updates);
+    };
+
+    const handleDeleteAccount = () => {
+        if (confirm("Apakah Anda yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan.")) {
+            deleteAccount.mutate({ confirmation: "DELETE_MY_ACCOUNT" });
+        }
     };
 
     const tabs = [
@@ -31,6 +82,7 @@ export default function SettingsPage() {
         { id: "security", label: "Keamanan", icon: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" },
         { id: "billing", label: "Billing", icon: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" },
         { id: "notifications", label: "Notifikasi", icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" },
+        { id: "danger", label: "Zona Bahaya", icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
     ];
 
     return (
@@ -50,11 +102,15 @@ export default function SettingsPage() {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all ${activeTab === tab.id
-                                        ? "bg-white dark:bg-zinc-900 border border-brand-primary/20 text-brand-primary shadow-lg shadow-brand-primary/5 font-medium"
-                                        : "text-zinc-600 dark:text-zinc-400 hover:bg-white/50 dark:hover:bg-zinc-900/50 hover:text-zinc-900 dark:hover:text-white"
+                                        ? tab.id === "danger"
+                                            ? "bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-medium"
+                                            : "bg-white dark:bg-zinc-900 border border-brand-primary/20 text-brand-primary shadow-lg shadow-brand-primary/5 font-medium"
+                                        : tab.id === "danger"
+                                            ? "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+                                            : "text-zinc-600 dark:text-zinc-400 hover:bg-white/50 dark:hover:bg-zinc-900/50 hover:text-zinc-900 dark:hover:text-white"
                                         }`}
                                 >
-                                    <svg className={`w-5 h-5 ${activeTab === tab.id ? "text-brand-primary" : "text-zinc-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className={`w-5 h-5 ${activeTab === tab.id ? (tab.id === "danger" ? "text-red-500" : "text-brand-primary") : (tab.id === "danger" ? "text-red-400" : "text-zinc-400")}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
                                     </svg>
                                     {tab.label}
@@ -98,36 +154,43 @@ export default function SettingsPage() {
                                                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Display Name</label>
                                                 <input
                                                     type="text"
-                                                    defaultValue={user.name ?? ""}
+                                                    value={name}
+                                                    onChange={(e) => setName(e.target.value)}
                                                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:ring-2 focus:ring-brand-primary outline-none transition-all"
                                                 />
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Username</label>
-                                                <div className="flex">
-                                                    <span className="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
-                                                        digisecond.id/
-                                                    </span>
-                                                    <input
-                                                        type="text"
-                                                        defaultValue={user.id}
-                                                        className="flex-1 px-4 py-3 rounded-r-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:ring-2 focus:ring-brand-primary outline-none transition-all"
-                                                    />
-                                                </div>
+                                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Nomor Telepon</label>
+                                                <input
+                                                    type="tel"
+                                                    value={phone}
+                                                    onChange={(e) => setPhone(e.target.value)}
+                                                    placeholder="08xxxxxxxxxx"
+                                                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:ring-2 focus:ring-brand-primary outline-none transition-all"
+                                                />
+                                                <p className="text-xs text-zinc-400 mt-1">Format: 11-13 digit angka</p>
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Bio / Deskripsi</label>
-                                                <textarea
-                                                    rows={4}
-                                                    placeholder="Tulis sedikit tentang diri Anda..."
-                                                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:ring-2 focus:ring-brand-primary outline-none transition-all resize-none"
+                                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Email</label>
+                                                <input
+                                                    type="email"
+                                                    value={user.email ?? ""}
+                                                    disabled
+                                                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-500 cursor-not-allowed"
                                                 />
+                                                <p className="text-xs text-zinc-400 mt-1">Email tidak dapat diubah</p>
                                             </div>
 
                                             <div className="pt-4">
-                                                <Button size="lg">Simpan Perubahan</Button>
+                                                <Button
+                                                    size="lg"
+                                                    onClick={handleSave}
+                                                    disabled={updateUser.isPending}
+                                                >
+                                                    {updateUser.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
@@ -141,6 +204,67 @@ export default function SettingsPage() {
                                         </div>
                                         <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/20 rounded-xl text-amber-800 dark:text-amber-400 text-sm">
                                             Fitur keamanan sedang dalam pemeliharaan sistem.
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === "billing" && (
+                                    <div className="space-y-8">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-1">Billing & Langganan</h2>
+                                            <p className="text-sm text-zinc-500">Kelola plan dan metode pembayaran.</p>
+                                        </div>
+
+                                        <div className="p-6 bg-gradient-to-br from-brand-primary/5 to-purple-500/5 border border-brand-primary/20 rounded-2xl">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="font-bold text-zinc-900 dark:text-white">Current Plan</h3>
+                                                <span className="text-xs font-bold bg-brand-primary/10 text-brand-primary px-3 py-1 rounded-full">
+                                                    {user.tier}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-zinc-500 mb-4">
+                                                {user.tier === "FREE"
+                                                    ? "Upgrade ke PRO untuk unlimited listings dan fee lebih rendah!"
+                                                    : "Anda sudah menggunakan plan premium."}
+                                            </p>
+                                            <Button variant="outline" onClick={() => router.push("/dashboard/pricing")}>
+                                                Lihat Semua Plan
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === "notifications" && (
+                                    <div className="space-y-8">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-1">Preferensi Notifikasi</h2>
+                                            <p className="text-sm text-zinc-500">Atur bagaimana Anda ingin menerima notifikasi.</p>
+                                        </div>
+                                        <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/20 rounded-xl text-amber-800 dark:text-amber-400 text-sm">
+                                            Fitur notifikasi sedang dalam pengembangan.
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === "danger" && (
+                                    <div className="space-y-8">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-red-600 dark:text-red-400 mb-1">Zona Bahaya</h2>
+                                            <p className="text-sm text-zinc-500">Tindakan berbahaya yang tidak dapat dibatalkan.</p>
+                                        </div>
+
+                                        <div className="p-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl">
+                                            <h3 className="font-bold text-red-700 dark:text-red-400 mb-2">Hapus Akun</h3>
+                                            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                                                Setelah akun dihapus, semua data Anda akan hilang secara permanen. Pastikan tidak ada transaksi yang sedang berjalan.
+                                            </p>
+                                            <Button
+                                                variant="destructive"
+                                                onClick={handleDeleteAccount}
+                                                disabled={deleteAccount.isPending}
+                                            >
+                                                {deleteAccount.isPending ? "Menghapus..." : "Hapus Akun Saya"}
+                                            </Button>
                                         </div>
                                     </div>
                                 )}

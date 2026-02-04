@@ -59,6 +59,15 @@ function ListingsContent() {
         return () => clearTimeout(timer);
     }, [searchInput, searchFilter, router, searchParams]);
 
+
+    // Map sort values to API format
+    const sortByMap: Record<string, "newest" | "price_asc" | "price_desc"> = {
+        latest: "newest",
+        newest: "newest",
+        price_asc: "price_asc",
+        price_desc: "price_desc",
+    };
+
     const { data, isLoading } = api.listing.getAll.useQuery({
         category: categoryFilter || undefined,
         type: typeFilter === "all" ? undefined : (typeFilter === "fixed" ? "FIXED" : "AUCTION"),

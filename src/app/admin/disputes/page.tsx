@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { api } from "@/trpc/react";
 import { useState } from "react";
 
@@ -18,7 +16,6 @@ export default function DisputesPage() {
             resolveDispute.mutate({
                 dispute_id: disputeId,
                 resolution: "FULL_REFUND",
-                status: "RESOLVED"
             });
         }
     };
