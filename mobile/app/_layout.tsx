@@ -7,6 +7,7 @@ import { lightTheme } from "../src/lib/theme";
 import { useEffect, useState } from "react";
 import { Appearance } from "react-native";
 import { useDeepLinkAuth } from "../src/hooks/useDeepLinkAuth";
+import { useTokenValidator } from "../src/hooks/useTokenValidator";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { api, createTRPCClient } from "../src/lib/api";
 
@@ -16,6 +17,9 @@ export default function Layout() {
 
     // Enable deep link authentication
     useDeepLinkAuth();
+
+    // Validate token on app startup
+    useTokenValidator();
 
     // Initialize React Query and tRPC
     const [queryClient] = useState(() => new QueryClient({
@@ -61,6 +65,7 @@ export default function Layout() {
                         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                         <Stack.Screen name="index" options={{ title: "DigiSecond" }} />
                         <Stack.Screen name="login" options={{ title: "Login", headerShown: false }} />
+                        <Stack.Screen name="auth-callback" options={{ title: "Signing In", headerShown: false }} />
                         <Stack.Screen name="search" options={{ headerShown: false, animation: 'none' }} />
                         <Stack.Screen name="listing/[id]" options={{ title: "Listing Details" }} />
                         <Stack.Screen name="chat/[id]" options={{ title: "Chat" }} />

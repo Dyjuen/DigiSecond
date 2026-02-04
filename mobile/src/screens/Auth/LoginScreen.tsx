@@ -30,21 +30,42 @@ export default function LoginScreen() {
 
         try {
             const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+
+            // First, get CSRF token (required by NextAuth)
+            const csrfRes = await fetch(`${apiUrl}/api/auth/csrf`);
+            const csrfData = await csrfRes.json();
+
+            if (!csrfData.csrfToken) {
+                throw new Error("Failed to get CSRF token");
+            }
+
+            // Use NextAuth's sign-in endpoint with proper form-encoded body
+            const formData = new URLSearchParams();
+            formData.append("email", email);
+            formData.append("redirect", "false");
+            formData.append("json", "true");
+            formData.append("callbackUrl", `${apiUrl}/auth/mobile-callback`);
+            formData.append("csrfToken", csrfData.csrfToken);
+
             const res = await fetch(`${apiUrl}/api/auth/signin/email`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email,
-                    callbackUrl: `${apiUrl}/auth/callback`,
-                }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: formData.toString(),
             });
 
             if (!res.ok) {
                 throw new Error("Failed to send magic link");
             }
 
-            alert(`Magic link sent to ${email}! Please check your email.`);
-            setEmail("");
+            const data = await res.json();
+
+            // NextAuth returns {url, ok} on success
+            if (data.ok || data.url) {
+                alert(`Magic link sent to ${email}! Please check your email.`);
+                setEmail("");
+            } else if (data.error) {
+                throw new Error(data.error);
+            }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to send magic link";
             setError(message);

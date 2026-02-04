@@ -116,6 +116,11 @@ export const authOptions: NextAuthOptions = {
             if (url.startsWith("/")) return `${baseUrl}${url}`;
             // Allows callback URLs on the same origin
             if (new URL(url).origin === baseUrl) return url;
+            // Allows mobile callback URL origin
+            const mobileCallbackUrl = process.env.MOBILE_CALLBACK_URL;
+            if (mobileCallbackUrl && new URL(url).origin === new URL(mobileCallbackUrl).origin) {
+                return url;
+            }
             return baseUrl;
         }
     },
@@ -202,46 +207,64 @@ export const authOptions: NextAuthOptions = {
                 EmailProvider({
                     server: emailServer,
                     from: emailFrom,
-                    async sendVerificationRequest({ identifier, url, provider }) {
-                        const { host } = new URL(url);
+                    async sendVerificationRequest({ identifier, url, provider, token }) {
+                        console.log(`[Email DEBUG] Original URL: ${url}`);
 
-                        try {
-                            // provider.server may be a string (URI) or an object with auth
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const transportConfig = typeof provider.server === "string" ? provider.server : (provider.server as any);
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const transport = nodemailer.createTransport(transportConfig as any);
+                        // Detect mobile requests by checking if callbackUrl contains 'mobile-callback'
+                        const mobileCallbackUrl = process.env.MOBILE_CALLBACK_URL;
+                        let finalUrl = url;
 
+                        // Parse URL to check callbackUrl parameter
+                        const urlObj = new URL(url);
+                        const callbackUrl = urlObj.searchParams.get('callbackUrl');
 
-                            const text = `Sign in to ${host}\n${url}\n\n`;
-                            const html = verificationEmailHtml({ url, host, theme: { color: "#6366f1" } });
+                        console.log(`[Email DEBUG] Parsed callbackUrl param: ${callbackUrl}`);
+                        console.log(`[Email DEBUG] MOBILE_CALLBACK_URL env: ${mobileCallbackUrl}`);
+                        console.log(`[Email DEBUG] Contains '10.0.2.2': ${callbackUrl?.includes('10.0.2.2')}`);
 
-                            console.log(`[Email] Attempting to send magic link to ${identifier} from ${provider.from}`);
-
-                            const result = await transport.sendMail({
-                                to: identifier,
-                                from: provider.from,
-                                subject: `Sign in to ${host}`,
-                                text,
-                                html,
-                            });
-
-                            console.log(`[Email] Transport result:`, result);
-
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const rejected = (result as any).rejected ?? [];
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const pending = (result as any).pending ?? [];
-                            const failed = rejected.concat(pending).filter(Boolean);
-                            if (failed.length) {
-                                console.error(`[Email] Failed to send to: ${failed.join(", ")}`);
-                                throw new Error(`Email(s) could not be sent to: ${failed.join(", ")}`);
-                            }
-                            console.log(`[Email] Successfully sent magic link to ${identifier}`);
-                        } catch (error) {
-                            console.error(`[Email] Error sending verification email:`, error);
-                            throw new Error("SEND_VERIFICATION_EMAIL_ERROR");
+                        // If this is a mobile request (callbackUrl contains 10.0.2.2) and MOBILE_CALLBACK_URL is set
+                        if (mobileCallbackUrl && callbackUrl?.includes('10.0.2.2')) {
+                            const nextAuthUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+                            finalUrl = url.replace(nextAuthUrl.replace(/\/$/, ''), mobileCallbackUrl.replace(/\/$/, ''));
+                            console.log(`[Email] Mobile request detected, using mobile callback URL: ${mobileCallbackUrl}`);
+                            console.log(`[Email DEBUG] Replaced ${nextAuthUrl} with ${mobileCallbackUrl}`);
+                            console.log(`[Email DEBUG] Final URL: ${finalUrl}`);
                         }
+
+                        const { host } = new URL(finalUrl);
+
+                        // provider.server may be a string (URI) or an object with auth
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const transportConfig = typeof provider.server === "string" ? provider.server : (provider.server as any);
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const transport = nodemailer.createTransport(transportConfig as any);
+
+                        const text = `Sign in to ${host}\n${finalUrl}\n\n`;
+                        const html = verificationEmailHtml({ url: finalUrl, host, theme: { color: "#6366f1" } });
+
+                        console.log(`[Email] Attempting to send magic link to ${identifier} from ${provider.from}`);
+                        console.log(`[Email] Magic link URL: ${finalUrl}`);
+
+                        const result = await transport.sendMail({
+                            to: identifier,
+                            from: provider.from,
+                            subject: `Sign in to ${host}`,
+                            text,
+                            html,
+                        });
+
+                        console.log(`[Email] Transport result:`, result);
+
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const rejected = (result as any).rejected ?? [];
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const pending = (result as any).pending ?? [];
+                        const failed = rejected.concat(pending).filter(Boolean);
+                        if (failed.length) {
+                            console.error(`[Email] Failed to send to: ${failed.join(", ")}`);
+                            throw new Error(`Email(s) could not be sent to: ${failed.join(", ")}`);
+                        }
+                        console.log(`[Email] Successfully sent magic link to ${identifier}`);
                     },
                 })
             );

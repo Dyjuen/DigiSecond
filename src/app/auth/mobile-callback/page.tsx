@@ -35,10 +35,14 @@ export default async function MobileCallbackPage() {
         suspended: session.user.suspended,
     });
 
+    // Get deep link scheme from env (development = exp://, production = digisecond://)
+    const deepLinkScheme = process.env.MOBILE_DEEP_LINK_SCHEME || "production";
+
     return (
         <MobileCallbackClient
             token={token}
             userName={session.user.name ?? session.user.email ?? "User"}
+            deepLinkScheme={deepLinkScheme}
         />
     );
 }

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 interface MobileCallbackClientProps {
     token: string;
     userName: string;
+    deepLinkScheme: string;
 }
 
 /**
@@ -14,9 +15,15 @@ interface MobileCallbackClientProps {
  * Due to browser security, we can't auto-redirect to custom schemes,
  * so we require explicit user interaction.
  */
-export default function MobileCallbackClient({ token, userName }: MobileCallbackClientProps) {
+export default function MobileCallbackClient({ token, userName, deepLinkScheme }: MobileCallbackClientProps) {
     const [copied, setCopied] = useState(false);
-    const deepLink = `digisecond://auth-callback?token=${token}`;
+
+    // Generate deep link based on scheme
+    // Development (Expo Go): exp://10.0.2.2:8081/--/auth-callback?token=...
+    // Production: digisecond://auth-callback?token=...
+    const deepLink = deepLinkScheme === "development"
+        ? `exp://10.0.2.2:8081/--/auth-callback?token=${token}`
+        : `digisecond://auth-callback?token=${token}`;
 
     const handleOpenApp = () => {
         window.location.href = deepLink;

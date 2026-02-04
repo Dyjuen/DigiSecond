@@ -75,7 +75,7 @@ DigiSecond is an Indonesian digital goods marketplace enabling secure peer-to-pe
 | **Forms** | React Hook Form + Zod | 7.x / 3.x |
 | **State** | Zustand + TanStack Query | 4.x / 5.x |
 | **Payments** | Xendit Node SDK | 3.x |
-| **Email** | Resend + React Email | 1.x |
+| **Email** | MailerSend (SMTP) | - |
 | **Cache/Queue** | Upstash Redis | - |
 | **Real-time** | Supabase Realtime | - |
 
@@ -111,7 +111,7 @@ DigiSecond is an Indonesian digital goods marketplace enabling secure peer-to-pe
 │  - Session cache           │  - Chat messages                    │
 │  - Rate limiting           │  - Bid updates                      │
 ├────────────────────────────┼────────────────────────────────────┤
-│  Xendit (Payments)         │  Resend + React Email               │
+│  Xendit (Payments)         │  MailerSend (SMTP)                  │
 │  - VA, E-wallet, QRIS      │  - Transaction emails               │
 │  - Webhooks                │  - Notifications                    │
 └─────────────────────────────────────────────────────────────────┘
@@ -753,8 +753,9 @@ XENDIT_WEBHOOK_TOKEN=...
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 
-# Email
-RESEND_API_KEY=...
+# Email (MailerSend SMTP)
+EMAIL_SERVER=smtp://user:password@smtp.mailersend.net:587
+EMAIL_FROM=YourApp <noreply@yourdomain.com>
 ```
 
 ---
