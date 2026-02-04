@@ -1,23 +1,16 @@
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, adminProcedure } from "../trpc";
 import { ListingStatus, TransactionStatus } from "@prisma/client";
 
 export const adminRouter = createTRPCRouter({
     getDashboardStats: adminProcedure.query(async ({ ctx }) => {
-        // 1. Total Users
         const totalUsers = await ctx.db.user.count();
 
-        // 2. Active Listings
         const activeListings = await ctx.db.listing.count({
             where: { status: ListingStatus.ACTIVE },
         });
-
-        // 3. Total Transactions (Sum of price for COMPLETED transactions)
-        // Since we might not have a dedicated Transaction table populated yet or it's named 'Transaction',
-        // let's check the schema first. Assuming 'Transaction' model exists from previous context.
-        // If not, we'll return 0 or mock it accurately based on schema.
-        // Checking schema via memory: I recall 'Transaction' model in other routers.
 
         let totalTransactionVolume = 0;
         try {
@@ -34,17 +27,14 @@ export const adminRouter = createTRPCRouter({
             console.warn("Transaction aggregate failed", e);
         }
 
-        // 4. Open Disputes
         const openDisputes = await ctx.db.dispute.count({
             where: { status: 'OPEN' }
         });
 
-        // 6. Pending Listings
         const pendingListings = await ctx.db.listing.count({
             where: { status: ListingStatus.PENDING }
         });
 
-        // 5. Recent Activity (Latest 5 users)
         const recentUsers = await ctx.db.user.findMany({
             take: 5,
             orderBy: { created_at: "desc" },
@@ -162,20 +152,251 @@ export const adminRouter = createTRPCRouter({
         });
     }),
 
+    /**
+     * Resolve a dispute with fund release/refund execution
+     * 
+     * Resolutions:
+     * - FULL_REFUND: Refund full amount to buyer, transaction -> REFUNDED
+     * - PARTIAL_REFUND: Requires partial_amount, split between buyer refund and seller payout
+     * - NO_REFUND: Release full amount to seller, transaction -> COMPLETED
+     */
     resolveDispute: adminProcedure
         .input(z.object({
-            dispute_id: z.string(),
+            dispute_id: z.string().uuid(),
             resolution: z.enum(["FULL_REFUND", "PARTIAL_REFUND", "NO_REFUND"]),
-            status: z.enum(["RESOLVED"])
+            partial_refund_amount: z.number().int().min(0).optional(),
+            admin_notes: z.string().max(1000).optional(),
         }))
         .mutation(async ({ ctx, input }) => {
-            return ctx.db.dispute.update({
+            const adminId = ctx.session.user.id;
+
+            // Get dispute with transaction details
+            const dispute = await ctx.db.dispute.findUnique({
                 where: { dispute_id: input.dispute_id },
-                data: {
-                    resolution: input.resolution,
-                    status: input.status,
-                    resolved_at: new Date()
-                }
+                include: {
+                    transaction: {
+                        include: {
+                            listing: { select: { listing_id: true, title: true } },
+                            buyer: { select: { user_id: true, name: true } },
+                            seller: {
+                                select: {
+                                    user_id: true,
+                                    name: true,
+                                    bank_accounts: {
+                                        where: { is_default: true },
+                                        take: 1,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             });
+
+            if (!dispute) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Dispute tidak ditemukan",
+                });
+            }
+
+            if (dispute.status === "RESOLVED") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Dispute sudah resolved",
+                });
+            }
+
+            // Validate partial refund amount
+            if (input.resolution === "PARTIAL_REFUND") {
+                if (!input.partial_refund_amount) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Jumlah refund sebagian harus diisi",
+                    });
+                }
+                if (input.partial_refund_amount > dispute.transaction.transaction_amount) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Jumlah refund tidak boleh melebihi total transaksi",
+                    });
+                }
+            }
+
+            const now = new Date();
+            const bankAccount = dispute.transaction.seller.bank_accounts[0];
+
+            await ctx.db.$transaction(async (tx) => {
+                // Update dispute
+                await tx.dispute.update({
+                    where: { dispute_id: input.dispute_id },
+                    data: {
+                        resolution: input.resolution,
+                        status: "RESOLVED",
+                        resolved_at: now,
+                    },
+                });
+
+                // Execute resolution based on type
+                if (input.resolution === "FULL_REFUND") {
+                    // Full refund to buyer
+                    await tx.transaction.update({
+                        where: { transaction_id: dispute.transaction_id },
+                        data: { status: TransactionStatus.REFUNDED },
+                    });
+
+                    // Restore listing
+                    await tx.listing.update({
+                        where: { listing_id: dispute.transaction.listing.listing_id },
+                        data: { status: ListingStatus.ACTIVE },
+                    });
+
+                    // Notify buyer
+                    await tx.notification.create({
+                        data: {
+                            user_id: dispute.transaction.buyer_id,
+                            notification_type: "DISPUTE_RESOLVED",
+                            title: "Dispute Diselesaikan - Full Refund",
+                            body: `Dispute Anda untuk "${dispute.transaction.listing.title}" telah diselesaikan. Dana akan di-refund sepenuhnya.`,
+                            data_payload: {
+                                dispute_id: input.dispute_id,
+                                resolution: "FULL_REFUND",
+                                refund_amount: dispute.transaction.transaction_amount,
+                            },
+                        },
+                    });
+
+                    // Notify seller
+                    await tx.notification.create({
+                        data: {
+                            user_id: dispute.transaction.seller_id,
+                            notification_type: "DISPUTE_RESOLVED",
+                            title: "Dispute Diselesaikan",
+                            body: `Dispute untuk "${dispute.transaction.listing.title}" telah diselesaikan dengan full refund ke pembeli.`,
+                            data_payload: { dispute_id: input.dispute_id, resolution: "FULL_REFUND" },
+                        },
+                    });
+
+                } else if (input.resolution === "PARTIAL_REFUND") {
+                    const refundAmount = input.partial_refund_amount!;
+                    const sellerAmount = dispute.transaction.transaction_amount - refundAmount;
+
+                    await tx.transaction.update({
+                        where: { transaction_id: dispute.transaction_id },
+                        data: { status: TransactionStatus.COMPLETED },
+                    });
+
+                    // Create payout for seller portion
+                    if (bankAccount && sellerAmount > 0) {
+                        await tx.payout.create({
+                            data: {
+                                transaction_id: dispute.transaction_id,
+                                seller_id: dispute.transaction.seller_id,
+                                payout_amount: sellerAmount,
+                                bank_code: bankAccount.bank_code,
+                                bank_name: bankAccount.bank_name,
+                                account_number: bankAccount.account_number,
+                                account_holder_name: bankAccount.account_holder_name,
+                                status: "PENDING",
+                            },
+                        });
+                    }
+
+                    // Notify both parties
+                    await tx.notification.create({
+                        data: {
+                            user_id: dispute.transaction.buyer_id,
+                            notification_type: "DISPUTE_RESOLVED",
+                            title: "Dispute Diselesaikan - Partial Refund",
+                            body: `Dispute Anda telah diselesaikan. Anda akan menerima refund Rp ${refundAmount.toLocaleString("id-ID")}.`,
+                            data_payload: { dispute_id: input.dispute_id, refund_amount: refundAmount },
+                        },
+                    });
+
+                    await tx.notification.create({
+                        data: {
+                            user_id: dispute.transaction.seller_id,
+                            notification_type: "DISPUTE_RESOLVED",
+                            title: "Dispute Diselesaikan",
+                            body: `Dispute diselesaikan dengan partial refund. Anda akan menerima Rp ${sellerAmount.toLocaleString("id-ID")}.`,
+                            data_payload: { dispute_id: input.dispute_id, seller_amount: sellerAmount },
+                        },
+                    });
+
+                } else {
+                    // NO_REFUND - release full amount to seller
+                    await tx.transaction.update({
+                        where: { transaction_id: dispute.transaction_id },
+                        data: {
+                            status: TransactionStatus.COMPLETED,
+                            completed_at: now,
+                        },
+                    });
+
+                    if (bankAccount) {
+                        await tx.payout.create({
+                            data: {
+                                transaction_id: dispute.transaction_id,
+                                seller_id: dispute.transaction.seller_id,
+                                payout_amount: dispute.transaction.seller_payout_amount,
+                                bank_code: bankAccount.bank_code,
+                                bank_name: bankAccount.bank_name,
+                                account_number: bankAccount.account_number,
+                                account_holder_name: bankAccount.account_holder_name,
+                                status: "PENDING",
+                            },
+                        });
+                    }
+
+                    // Notify seller
+                    await tx.notification.create({
+                        data: {
+                            user_id: dispute.transaction.seller_id,
+                            notification_type: "DISPUTE_RESOLVED",
+                            title: "Dispute Diselesaikan - Favor Anda",
+                            body: `Dispute untuk "${dispute.transaction.listing.title}" diselesaikan. Dana akan dikirim ke rekening Anda.`,
+                            data_payload: {
+                                dispute_id: input.dispute_id,
+                                payout_amount: dispute.transaction.seller_payout_amount,
+                            },
+                        },
+                    });
+
+                    // Notify buyer
+                    await tx.notification.create({
+                        data: {
+                            user_id: dispute.transaction.buyer_id,
+                            notification_type: "DISPUTE_RESOLVED",
+                            title: "Dispute Diselesaikan",
+                            body: `Dispute Anda untuk "${dispute.transaction.listing.title}" telah diselesaikan tanpa refund.`,
+                            data_payload: { dispute_id: input.dispute_id, resolution: "NO_REFUND" },
+                        },
+                    });
+                }
+
+                // Audit log
+                await tx.auditLog.create({
+                    data: {
+                        entity_type: "Dispute",
+                        entity_id: input.dispute_id,
+                        action_type: "DISPUTE_RESOLVED",
+                        action_description: `Admin resolved dispute with ${input.resolution}`,
+                        old_value: { status: dispute.status },
+                        new_value: {
+                            status: "RESOLVED",
+                            resolution: input.resolution,
+                            partial_amount: input.partial_refund_amount,
+                            admin_notes: input.admin_notes,
+                        },
+                        performed_by_user_id: adminId,
+                    },
+                });
+            });
+
+            return {
+                success: true,
+                dispute_id: input.dispute_id,
+                resolution: input.resolution,
+            };
         }),
 });
