@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { StyleSheet, View, ViewStyle, Animated } from "react-native";
 import { Text, Card, useTheme, IconButton } from "react-native-paper";
 import { shadows } from "../lib/theme";
+import { useHaptic } from "../hooks/useHaptic";
 
 interface ListingCardProps {
     id: string;
@@ -17,6 +18,7 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const heartScaleAnim = useRef(new Animated.Value(1)).current;
     const [isLiked, setIsLiked] = useState(false);
+    const haptics = useHaptic();
 
     const handlePressIn = () => {
         Animated.spring(scaleAnim, {
@@ -35,6 +37,7 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
     };
 
     const toggleLike = () => {
+        haptics.trigger('medium');
         setIsLiked(!isLiked);
         Animated.sequence([
             Animated.spring(heartScaleAnim, {
@@ -65,7 +68,7 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
                 onPressOut={handlePressOut}
             >
                 <View>
-                    {/* @ts-ignore - RNP typings mismatch for source */}
+                    {/* @ts-expect-error - RNP typings mismatch for source */}
                     <Card.Cover source={{ uri: imageUrl }} style={styles.image} />
                     <Animated.View style={[styles.favoriteButtonWrapper, { transform: [{ scale: heartScaleAnim }] }]}>
                         <IconButton
@@ -78,7 +81,7 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
                     </Animated.View>
                 </View>
                 <Card.Content style={styles.content}>
-                    {/* @ts-ignore - RNP typings mismatch for numberOfLines */}
+                    {/* @ts-expect-error - RNP typings mismatch for numberOfLines */}
                     <Text variant="bodyMedium" numberOfLines={2} style={styles.title}>
                         {title}
                     </Text>

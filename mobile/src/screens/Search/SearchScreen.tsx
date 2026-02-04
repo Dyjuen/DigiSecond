@@ -9,11 +9,14 @@ import { ListingCard } from '../../components/ListingCard';
 import { FilterModal } from '../../components/FilterModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../lib/api';
+import { ListingCardSkeleton } from '../../components/ListingCardSkeleton';
+import { useHaptic } from '../../hooks/useHaptic';
 
 export default function SearchScreen() {
     const theme = useTheme();
     const router = useRouter();
     const params = useLocalSearchParams();
+    const haptics = useHaptic();
 
     // UI State
     const [searchQuery, setSearchQuery] = useState('');
@@ -67,11 +70,13 @@ export default function SearchScreen() {
     }, [filters]);
 
     const handleApplyFilters = (newFilters: FilterOptions) => {
+        haptics.trigger('medium');
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setFilters(newFilters);
     };
 
     const handleResetFilters = () => {
+        haptics.trigger('medium');
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setFilters({});
     };
@@ -93,7 +98,10 @@ export default function SearchScreen() {
                 <View>
                     <Button
                         mode="outlined"
-                        onPress={() => setIsFilterVisible(true)}
+                        onPress={() => {
+                            haptics.trigger('light');
+                            setIsFilterVisible(true);
+                        }}
                         icon="filter-variant"
                         style={styles.filterButton}
                     >
@@ -164,6 +172,7 @@ export default function SearchScreen() {
                         <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
+                                haptics.trigger('light');
                                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                                 setFilters(prev => {
                                     const next = { ...prev };
@@ -203,10 +212,18 @@ export default function SearchScreen() {
 
             {/* Results */}
             {isLoading ? (
-                <View style={styles.centerContainer}>
-                    <ActivityIndicator size="large" color={theme.colors.primary} />
-                    <Text style={{ marginTop: 16, color: theme.colors.onSurfaceVariant }}>Memuat...</Text>
-                </View>
+                <FlatList
+                    data={Array.from({ length: 6 })}
+                    keyExtractor={(_, index) => `skeleton-${index}`}
+                    renderItem={() => (
+                        <View style={styles.card}>
+                            <ListingCardSkeleton />
+                        </View>
+                    )}
+                    numColumns={2}
+                    contentContainerStyle={styles.listContent}
+                    columnWrapperStyle={styles.columnWrapper}
+                />
             ) : error ? (
                 <View style={styles.centerContainer}>
                     <MaterialCommunityIcons name="alert-circle-outline" size={48} color={theme.colors.error} />

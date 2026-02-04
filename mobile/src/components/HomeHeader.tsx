@@ -90,6 +90,9 @@ export const HomeHeader = ({
                                     onChangeText={onSearchChange}
                                     style={{ flex: 1, color: theme.colors.onSurface, height: 40, paddingVertical: 0, backgroundColor: 'transparent' }}
                                     autoFocus={true}
+                                    onFocus={() => {
+                                        // Optional: Add focus logic if needed, currently controlled by parent state
+                                    }}
                                 />
                                 {searchQuery ? (
                                     <TouchableOpacity onPress={() => onSearchChange?.('')}>

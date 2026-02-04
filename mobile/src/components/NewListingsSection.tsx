@@ -2,6 +2,7 @@ import React from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { ListingCard } from "./ListingCard";
+import { ListingCardSkeleton } from "./ListingCardSkeleton";
 import { useRouter } from "expo-router";
 import { api } from "../lib/api";
 
@@ -32,7 +33,11 @@ export function NewListingsSection() {
                 contentContainerStyle={styles.scrollContent}
             >
                 {isLoading ? (
-                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginLeft: 16 }} />
+                    Array.from({ length: 3 }).map((_, index) => (
+                        <View key={`skeleton-${index}`} style={styles.card}>
+                            <ListingCardSkeleton />
+                        </View>
+                    ))
                 ) : listings.length === 0 ? (
                     <Text variant="bodyMedium" style={{ marginLeft: 16, color: theme.colors.onSurfaceVariant }}>
                         Tidak ada listing baru
