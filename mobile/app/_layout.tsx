@@ -30,7 +30,7 @@ export default function Layout() {
             },
         },
     }));
-    const [trpcClient] = useState(() => createTRPCClient(null)); // No auth for public APIs
+    const [trpcClient] = useState(() => createTRPCClient()); // Auth tokens are handled dynamically
 
     useEffect(() => {
         const subscription = Appearance.addChangeListener(({ colorScheme }) => {

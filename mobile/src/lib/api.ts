@@ -9,18 +9,22 @@ import type { AppRouter } from "../../../src/server/api/root";
  */
 export const api = createTRPCReact<AppRouter>();
 
+import { useAuthStore } from "../stores/authStore";
+
 /**
- * Create tRPC client with auth token
- * @param token - JWT auth token from auth store
+ * Create tRPC client with dynamic auth token
  */
-export function createTRPCClient(token: string | null) {
+export function createTRPCClient() {
     return api.createClient({
         links: [
             httpBatchLink({
                 url: `${process.env.EXPO_PUBLIC_API_URL}/api/trpc`,
-                headers: () => ({
-                    Authorization: token ? `Bearer ${token}` : "",
-                }),
+                headers: () => {
+                    const token = useAuthStore.getState().token;
+                    return {
+                        Authorization: token ? `Bearer ${token}` : "",
+                    };
+                },
                 transformer: superjson,
             }),
         ],

@@ -1,16 +1,17 @@
 import React from "react";
 import { View, StyleSheet, FlatList } from "react-native";
-import { Text, useTheme, Button, FAB } from "react-native-paper";
+import { Text, useTheme, Button, FAB, ActivityIndicator } from "react-native-paper";
 import { useRouter } from "expo-router";
-import { useListingStore, CURRENT_USER_ID } from "../../stores/listingStore";
+import { api } from "../../lib/api";
 import { ListingCard } from "../../components/ListingCard";
 
 export default function MyListingsScreen() {
     const theme = useTheme();
     const router = useRouter();
-    const myListings = useListingStore((state) =>
-        state.listings.filter(l => l.sellerId === CURRENT_USER_ID)
-    );
+    const { data: listings, isLoading, refetch, isRefetching } = api.listing.getByUser.useQuery({
+        limit: 20,
+        // Removed status filter - show all listings (PENDING, ACTIVE, etc.)
+    });
 
     const handleCreate = () => {
         router.push("/listing/create");
@@ -18,7 +19,11 @@ export default function MyListingsScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-            {myListings.length === 0 ? (
+            {isLoading ? (
+                <View style={styles.emptyState}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                </View>
+            ) : !listings?.listings || listings.listings.length === 0 ? (
                 <View style={styles.emptyState}>
                     <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16 }}>
                         Kamu belum menjual apapun.
@@ -29,20 +34,21 @@ export default function MyListingsScreen() {
                 </View>
             ) : (
                 <FlatList
-                    data={myListings}
-                    keyExtractor={(item) => item.id}
+                    data={listings.listings}
+                    keyExtractor={(item) => item.listing_id}
                     contentContainerStyle={styles.listContent}
+                    onRefresh={refetch}
+                    refreshing={isRefetching}
                     renderItem={({ item }) => (
                         <View style={styles.itemContainer}>
                             <ListingCard
-                                id={item.id}
+                                id={item.listing_id}
                                 title={item.title}
                                 price={item.price}
-                                imageUrl={item.imageUrl}
-                                onPress={() => router.push(`/listing/${item.id}`)}
-                                style={{ width: 160 }} // Override width for grid-like feel or list
+                                imageUrl={item.photo_urls?.[0] || "https://via.placeholder.com/400x300?text=No+Image"}
+                                onPress={() => router.push(`/listing/${item.listing_id}`)}
+                                style={{ width: 160 }}
                             />
-                            {/* In a real app we might want a row layout or delete button here directly */}
                         </View>
                     )}
                     numColumns={2}
