@@ -161,6 +161,7 @@ export const listingRouter = createTRPCRouter({
                 bid_increment: z.number().default(5000),
                 auction_ends_at: z.date().optional(),
                 buy_now_price: z.number().optional(),
+                photos: z.array(z.string()).optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -206,6 +207,7 @@ export const listingRouter = createTRPCRouter({
                     bid_increment: input.bid_increment,
                     auction_ends_at: input.auction_ends_at,
                     buy_now_price: input.buy_now_price,
+                    photo_urls: input.photos,
                 },
             });
         }),
@@ -323,8 +325,8 @@ export const listingRouter = createTRPCRouter({
                     ...(input.title && { title: input.title }),
                     ...(input.description && { description: input.description }),
                     ...(input.price && { price: input.price }),
-                    ...(finalCategoryId && { category_id: finalCategoryId }),
-                    ...(input.photos && { photos: input.photos }),
+                    ...(finalCategoryId && { category: { connect: { category_id: finalCategoryId } } }),
+                    ...(input.photos && { photo_urls: input.photos }),
                 },
             });
         }),
@@ -366,10 +368,40 @@ export const listingRouter = createTRPCRouter({
                 });
             }
 
+            // Delete photos from Supabase storage
+            if (listing.photo_urls && listing.photo_urls.length > 0) {
+                const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-            return ctx.db.listing.update({
+                if (supabaseUrl && supabaseKey) {
+                    const { createClient } = await import("@supabase/supabase-js");
+                    const supabase = createClient(supabaseUrl, supabaseKey);
+
+                    // Extract file paths from URLs
+                    const filePaths = listing.photo_urls
+                        .map((url) => {
+                            // URL format: https://[project].supabase.co/storage/v1/object/public/uploads/[path]
+                            const match = url.match(/\/uploads\/(.+)$/);
+                            return match ? match[1] : null;
+                        })
+                        .filter(Boolean) as string[];
+
+                    if (filePaths.length > 0) {
+                        const { error } = await supabase.storage
+                            .from("uploads")
+                            .remove(filePaths);
+
+                        if (error) {
+                            console.error("Failed to delete photos from storage:", error);
+                            // Continue with listing deletion even if photo deletion fails
+                        }
+                    }
+                }
+            }
+
+            // Hard delete the listing
+            return ctx.db.listing.delete({
                 where: { listing_id: input.listingId },
-                data: { status: "CANCELLED" },
             });
         }),
 

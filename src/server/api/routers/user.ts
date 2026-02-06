@@ -40,6 +40,36 @@ export const userRouter = createTRPCRouter({
         }),
 
     /**
+     * Get current authenticated user's full profile (protected)
+     */
+    getMe: protectedProcedure
+        .query(async ({ ctx }) => {
+            const user = await ctx.db.user.findUnique({
+                where: { user_id: ctx.session.user.id },
+                select: {
+                    user_id: true,
+                    email: true,
+                    name: true,
+                    avatar_url: true,
+                    phone: true,
+                    id_card_url: true,
+                    role: true,
+                    is_verified: true,
+                    created_at: true,
+                },
+            });
+
+            if (!user) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "User tidak ditemukan",
+                });
+            }
+
+            return user;
+        }),
+
+    /**
      * Update own profile (including KYC data)
      */
     update: protectedProcedure
