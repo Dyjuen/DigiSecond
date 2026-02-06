@@ -1,12 +1,11 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ScrollView, Image } from "react-native";
+import { View, StyleSheet, ScrollView, Image, Alert } from "react-native";
 import { Text, Button, Card, Avatar, Divider, useTheme, IconButton } from "react-native-paper";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { Skeleton } from "../../components/Skeleton";
 import { shadows } from "../../lib/theme";
-import { Alert } from "react-native";
 import { api } from "../../lib/api";
-import PurchaseSheet from "../../components/PurchaseSheet";
+import PaymentSheet from "../../components/PaymentSheet";
 import PaymentInstructionsSheet from "../../components/PaymentInstructionsSheet";
 
 export default function ListingDetailScreen() {
@@ -15,8 +14,8 @@ export default function ListingDetailScreen() {
     const theme = useTheme();
 
     // Sheet visibility states
-    const [isPurchaseSheetVisible, setPurchaseSheetVisible] = useState(false);
     const [isPaymentSheetVisible, setPaymentSheetVisible] = useState(false);
+    const [isPaymentInstructionsVisible, setPaymentInstructionsVisible] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"VA" | "EWALLET" | "QRIS">("VA");
 
     // Fetch listing from API
@@ -25,27 +24,51 @@ export default function ListingDetailScreen() {
         { enabled: !!id }
     );
 
-    const isOwner = false; // TODO: Check against actual user ID when auth is implemented
+    // Auth & Mutations
+    const utils = api.useUtils();
+    const { data: session } = api.auth.getSession.useQuery();
+    const deleteMutation = api.listing.delete.useMutation({
+        onSuccess: () => {
+            utils.listing.getByUser.invalidate();
+            router.replace("/(tabs)/");
+            Alert.alert("Deleted", "Listing has been removed");
+        },
+        onError: (err) => {
+            Alert.alert("Error", err.message);
+        }
+    });
+
+    const isOwner = session?.user?.id === listing?.seller_id;
 
     const handleDelete = () => {
-        // TODO: Will use api.listing.delete.useMutation() when auth is implemented
-        Alert.alert("Not Implemented", "Delete requires authentication");
+        Alert.alert(
+            "Delete Listing",
+            "Are you sure you want to delete this listing?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => deleteMutation.mutate({ listingId: id as string })
+                }
+            ]
+        );
     };
 
     const handleEdit = () => {
-        // TODO: Navigate to edit screen when auth is implemented
-        router.push(`/listing/create?id=${id}`);
+        router.push({ pathname: "/listing/edit/[id]", params: { id: id as string } });
     };
 
+
     const handlePurchaseConfirm = (method: "VA" | "EWALLET" | "QRIS") => {
+        setPaymentSheetVisible(false);
         setSelectedPaymentMethod(method);
-        setPurchaseSheetVisible(false);
-        // Small delay for smooth transition
-        setTimeout(() => setPaymentSheetVisible(true), 300);
+        // Ensure instructions open after sheet closes
+        setTimeout(() => setPaymentInstructionsVisible(true), 400);
     };
 
     const handlePaymentComplete = () => {
-        setPaymentSheetVisible(false);
+        setPaymentInstructionsVisible(false);
         // In real app: Navigate to specific chat ID
         // For prototype: Go to chats tab
         Alert.alert(
@@ -163,7 +186,7 @@ export default function ListingDetailScreen() {
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                         <Button
                             mode="contained"
-                            onPress={() => setPurchaseSheetVisible(true)}
+                            onPress={() => setPaymentSheetVisible(true)}
                             contentStyle={{ paddingVertical: 8 }}
                             style={{ flex: 1, marginTop: 0 }}
                         >
@@ -185,21 +208,21 @@ export default function ListingDetailScreen() {
             </View>
 
             {/* Sheets */}
-            <PurchaseSheet
-                visible={isPurchaseSheetVisible}
-                onDismiss={() => setPurchaseSheetVisible(false)}
+            <PaymentSheet
+                visible={isPaymentSheetVisible}
+                onDismiss={() => setPaymentSheetVisible(false)}
                 listing={{
-                    id: listing.id,
+                    id: listing.listing_id,
                     title: listing.title,
                     price: listing.price,
-                    sellerName: listing.seller.name
+                    sellerName: listing.seller.name || "Seller"
                 }}
                 onConfirm={handlePurchaseConfirm}
             />
 
             <PaymentInstructionsSheet
-                visible={isPaymentSheetVisible}
-                onDismiss={() => setPaymentSheetVisible(false)}
+                visible={isPaymentInstructionsVisible}
+                onDismiss={() => setPaymentInstructionsVisible(false)}
                 amount={listing.price}
                 paymentMethod={selectedPaymentMethod}
                 onPaymentComplete={handlePaymentComplete}
