@@ -4,7 +4,11 @@
  * Tests transaction creation, validation, and purchase flow.
  * Comprehensive edge cases for production readiness.
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { type inferProcedureInput } from "@trpc/server";
+import { type AppRouter } from "@/server/api/root";
+import { createInnerTRPCContext } from "@/server/api/trpc";
+import { transactionRouter } from "@/server/api/routers/transaction";
 import { TRPCError } from "@trpc/server";
 import {
     createTestCaller,
@@ -16,6 +20,12 @@ import {
     cleanupTestListing,
     db,
 } from "./helpers/testContext";
+
+// Mock rate limiter to avoid TOO_MANY_REQUESTS in tests
+vi.mock("@/lib/rate-limit", () => ({
+    checkRateLimit: vi.fn().mockResolvedValue({ success: true }),
+    userRateLimitKey: vi.fn((action: string, userId: string) => `test:${action}:${userId}`),
+}));
 
 describe("Transaction Router", () => {
     const testEmails: string[] = [];
@@ -227,9 +237,14 @@ describe("Transaction Router", () => {
 
             testTransactionIds.push(result.transaction_id);
 
-            expect(result.status).toBe("PENDING_PAYMENT");
-            expect(result.buyer_id).toBe(testBuyerId);
-            expect(result.seller_id).toBe(testSellerId);
+            const tx = await db.transaction.findUnique({
+                where: { transaction_id: result.transaction_id },
+            });
+
+            expect(result.transaction_id).toBeDefined();
+            expect(tx?.status).toBe("PENDING_PAYMENT");
+            expect(tx?.buyer_id).toBe(testBuyerId);
+            expect(tx?.seller_id).toBe(testSellerId);
         });
 
         it("should calculate 5% platform fee", async () => {
@@ -257,9 +272,9 @@ describe("Transaction Router", () => {
             testTransactionIds.push(result.transaction_id);
 
             // 5% of 200000 = 10000
-            expect(result.platform_fee_amount).toBe(10000);
+            expect(result.platform_fee).toBe(10000);
             // Payout = 200000 - 10000 = 190000
-            expect(result.seller_payout_amount).toBe(190000);
+            expect(result.seller_payout).toBe(190000);
         });
 
         it("should create associated payment record", async () => {
@@ -324,7 +339,7 @@ describe("Transaction Router", () => {
             testTransactionIds.push(result.transaction_id);
 
             // Should use current_bid, not price
-            expect(result.transaction_amount).toBe(85000);
+            expect(result.amount).toBe(85000);
         });
 
         it("should reject suspended user", async () => {
@@ -452,9 +467,9 @@ describe("Transaction Router", () => {
 
             testTransactionIds.push(result.transaction_id);
 
-            expect(result.transaction_amount).toBe(1000);
+            expect(result.amount).toBe(1000);
             // 5% of 1000 = 50
-            expect(result.platform_fee_amount).toBe(50);
+            expect(result.platform_fee).toBe(50);
         });
 
         it("should handle high price listing", async () => {
@@ -481,9 +496,9 @@ describe("Transaction Router", () => {
 
             testTransactionIds.push(result.transaction_id);
 
-            expect(result.transaction_amount).toBe(999999999);
+            expect(result.amount).toBe(999999999);
             // 5% of 999999999 ≈ 49999999 (floor)
-            expect(result.platform_fee_amount).toBe(Math.floor(999999999 * 0.05));
+            expect(result.platform_fee).toBe(Math.floor(999999999 * 0.05));
         });
     });
 });

@@ -3,6 +3,8 @@ import { View, StyleSheet, TouchableOpacity, ScrollView, Alert, Animated, Easing
 import { Text, Portal, Modal, Button, IconButton, useTheme, Card, List } from "react-native-paper";
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as WebBrowser from "expo-web-browser";
+import { api } from "../lib/api";
 
 // Define strict colors from design tokens
 const COLORS = {
@@ -25,6 +27,9 @@ interface PaymentInstructionsSheetProps {
     amount: number;
     paymentMethod: "VA" | "EWALLET" | "QRIS";
     onPaymentComplete: () => void;
+    invoiceUrl?: string;
+    transactionId?: string;
+    expiresAt?: Date;
 }
 
 export default function PaymentInstructionsSheet({
@@ -32,7 +37,10 @@ export default function PaymentInstructionsSheet({
     onDismiss,
     amount,
     paymentMethod,
-    onPaymentComplete
+    onPaymentComplete,
+    invoiceUrl,
+    transactionId,
+    expiresAt
 }: PaymentInstructionsSheetProps) {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
@@ -56,6 +64,35 @@ export default function PaymentInstructionsSheet({
             }).start();
         }
     }, [visible]);
+
+    // Polling Logic
+    const utils = api.useUtils();
+    const { data: transactionStatus } = api.transaction.getById.useQuery(
+        { transaction_id: transactionId || "" },
+        {
+            enabled: visible && !!transactionId,
+            refetchInterval: (data: any) => {
+                if (data?.status === "PAID" || data?.status === "COMPLETED") return false;
+                return 3000; // Poll every 3 seconds
+            },
+        }
+    );
+
+    useEffect(() => {
+        if (transactionStatus?.status === "PAID" || transactionStatus?.status === "COMPLETED") {
+            onPaymentComplete();
+        }
+    }, [transactionStatus?.status]);
+
+    const handlePayNow = async () => {
+        if (invoiceUrl) {
+            await WebBrowser.openBrowserAsync(invoiceUrl);
+            // On return, polling will catch the update if payment was successful
+            utils.transaction.getById.invalidate({ transaction_id: transactionId });
+        } else {
+            Alert.alert("Error", "Invoice URL not available");
+        }
+    };
 
     const handleDismiss = () => {
         Animated.timing(slideAnim, {
@@ -131,7 +168,9 @@ export default function PaymentInstructionsSheet({
                         <View style={styles.deadlineCard}>
                             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
                                 <IconButton icon="clock-outline" iconColor={COLORS.warning} size={20} style={{ margin: 0, marginRight: 4 }} />
-                                <Text style={{ color: COLORS.warning, fontWeight: "bold" }}>Pay before: 23:59:45</Text>
+                                <Text style={{ color: COLORS.warning, fontWeight: "bold" }}>
+                                    Pay before: {expiresAt ? new Date(expiresAt).toLocaleTimeString() : '23:59:59'}
+                                </Text>
                             </View>
                         </View>
 
@@ -144,7 +183,7 @@ export default function PaymentInstructionsSheet({
 
                             <View style={styles.accountRow}>
                                 <Text variant="headlineSmall" style={{ color: theme.colors.onSurface, fontWeight: "bold" }}>
-                                    {MOCK_VA_NUMBER}
+                                    {invoiceUrl ? "Pay via Link" : MOCK_VA_NUMBER}
                                 </Text>
                                 <IconButton
                                     icon="content-copy"
@@ -210,11 +249,11 @@ export default function PaymentInstructionsSheet({
                     <View style={styles.footer}>
                         <Button
                             mode="contained"
-                            onPress={onPaymentComplete}
+                            onPress={invoiceUrl ? handlePayNow : onPaymentComplete}
                             style={{ backgroundColor: COLORS.brandPrimary }}
                             labelStyle={{ fontSize: 16, paddingVertical: 4 }}
                         >
-                            I've Made Payment
+                            {invoiceUrl ? "Pay Now" : "I've Made Payment"}
                         </Button>
                         <Button
                             mode="text"

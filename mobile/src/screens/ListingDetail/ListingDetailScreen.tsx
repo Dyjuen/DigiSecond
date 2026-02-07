@@ -2,11 +2,19 @@ import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, Image, Alert } from "react-native";
 import { Text, Button, Card, Avatar, Divider, useTheme, IconButton } from "react-native-paper";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import { Skeleton } from "../../components/Skeleton";
 import { shadows } from "../../lib/theme";
 import { api } from "../../lib/api";
 import PaymentSheet from "../../components/PaymentSheet";
 import PaymentInstructionsSheet from "../../components/PaymentInstructionsSheet";
+
+type PaymentInfo = {
+    invoiceUrl: string;
+    transactionId: string;
+    expiresAt: Date;
+    paymentMethod: "VA" | "EWALLET" | "QRIS";
+} | null;
 
 export default function ListingDetailScreen() {
     const router = useRouter();
@@ -17,6 +25,8 @@ export default function ListingDetailScreen() {
     const [isPaymentSheetVisible, setPaymentSheetVisible] = useState(false);
     const [isPaymentInstructionsVisible, setPaymentInstructionsVisible] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"VA" | "EWALLET" | "QRIS">("VA");
+    const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>(null);
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     // Fetch listing from API
     const { data: listing, isLoading, error } = api.listing.getById.useQuery(
@@ -37,6 +47,9 @@ export default function ListingDetailScreen() {
             Alert.alert("Error", err.message);
         }
     });
+
+    const createTransaction = api.transaction.create.useMutation();
+    const createPayment = api.payment.create.useMutation();
 
     const isOwner = session?.user?.id === listing?.seller_id;
 
@@ -60,11 +73,42 @@ export default function ListingDetailScreen() {
     };
 
 
-    const handlePurchaseConfirm = (method: "VA" | "EWALLET" | "QRIS") => {
-        setPaymentSheetVisible(false);
-        setSelectedPaymentMethod(method);
-        // Ensure instructions open after sheet closes
-        setTimeout(() => setPaymentInstructionsVisible(true), 400);
+    const handlePurchaseConfirm = async (method: "VA" | "EWALLET" | "QRIS") => {
+        try {
+            setIsProcessingPayment(true);
+            setSelectedPaymentMethod(method);
+
+            // 1. Create Transaction
+            const transaction = await createTransaction.mutateAsync({
+                listing_id: id as string,
+                payment_method: method
+            });
+
+            // 2. Create Payment (Invoice)
+            const redirectUrl = Linking.createURL("payment-result");
+            console.log("Redirect URL:", redirectUrl); // Debugging
+
+            const payment = await createPayment.mutateAsync({
+                transaction_id: transaction.transaction_id,
+                redirect_url: redirectUrl
+            });
+
+            // 3. Set Info and Show Instructions
+            setPaymentInfo({
+                invoiceUrl: payment.invoice_url,
+                transactionId: transaction.transaction_id,
+                expiresAt: payment.expires_at,
+                paymentMethod: method
+            });
+
+            setPaymentSheetVisible(false);
+            setTimeout(() => setPaymentInstructionsVisible(true), 400);
+
+        } catch (err: any) {
+            Alert.alert("Transaction Failed", err.message || "Something went wrong");
+        } finally {
+            setIsProcessingPayment(false);
+        }
     };
 
     const handlePaymentComplete = () => {
@@ -207,7 +251,6 @@ export default function ListingDetailScreen() {
                 )}
             </View>
 
-            {/* Sheets */}
             <PaymentSheet
                 visible={isPaymentSheetVisible}
                 onDismiss={() => setPaymentSheetVisible(false)}
@@ -218,6 +261,7 @@ export default function ListingDetailScreen() {
                     sellerName: listing.seller.name || "Seller"
                 }}
                 onConfirm={handlePurchaseConfirm}
+                isLoading={isProcessingPayment}
             />
 
             <PaymentInstructionsSheet
@@ -226,6 +270,9 @@ export default function ListingDetailScreen() {
                 amount={listing.price}
                 paymentMethod={selectedPaymentMethod}
                 onPaymentComplete={handlePaymentComplete}
+                invoiceUrl={paymentInfo?.invoiceUrl}
+                transactionId={paymentInfo?.transactionId}
+                expiresAt={paymentInfo?.expiresAt}
             />
         </View>
     );

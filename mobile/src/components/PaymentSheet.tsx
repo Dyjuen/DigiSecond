@@ -25,9 +25,10 @@ interface PaymentSheetProps {
         sellerName: string;
     };
     onConfirm: (method: PaymentMethodType) => void;
+    isLoading?: boolean;
 }
 
-export default function PaymentSheet({ visible, onDismiss, listing, onConfirm }: PaymentSheetProps) {
+export default function PaymentSheet({ visible, onDismiss, listing, onConfirm, isLoading = false }: PaymentSheetProps) {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
     const [selectedMethod, setSelectedMethod] = useState<PaymentMethodType>("VA");
@@ -187,8 +188,10 @@ export default function PaymentSheet({ visible, onDismiss, listing, onConfirm }:
                             onPress={() => onConfirm(selectedMethod)}
                             style={{ backgroundColor: COLORS.brandPrimary }}
                             labelStyle={{ fontSize: 16, paddingVertical: 4 }}
+                            loading={isLoading}
+                            disabled={isLoading}
                         >
-                            Confirm Purchase - {formatPrice(listing.price)}
+                            {isLoading ? "Processing..." : `Confirm Purchase - ${formatPrice(listing.price)}`}
                         </Button>
                     </View>
                 </Animated.View>

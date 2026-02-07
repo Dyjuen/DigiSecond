@@ -14,6 +14,7 @@ import { checkRateLimit, userRateLimitKey } from "@/lib/rate-limit";
 
 const createPaymentInput = z.object({
     transaction_id: z.string().uuid("ID transaksi tidak valid"),
+    redirect_url: z.string().url().optional(),
 });
 
 const getStatusInput = z.object({
@@ -38,6 +39,8 @@ export const paymentRouter = createTRPCRouter({
         .input(createPaymentInput)
         .mutation(async ({ ctx, input }) => {
             const userId = ctx.session.user.id;
+            console.log("[payment.create] Input:", input);
+            console.log("[payment.create] Redirect URL:", input.redirect_url);
 
             // Rate limit: 10 payment attempts per hour
             const rateLimit = await checkRateLimit(
@@ -94,7 +97,9 @@ export const paymentRouter = createTRPCRouter({
 
             // Idempotency: return existing pending payment if valid
             const existingPayment = transaction.payments[0];
-            if (existingPayment && existingPayment.expires_at && existingPayment.expires_at > new Date()) {
+            const isPlaceholder = existingPayment?.xendit_payment_id.startsWith("pending_");
+
+            if (existingPayment && !isPlaceholder && existingPayment.expires_at && existingPayment.expires_at > new Date()) {
                 return {
                     payment_id: existingPayment.payment_id,
                     xendit_id: existingPayment.xendit_payment_id,
@@ -106,15 +111,24 @@ export const paymentRouter = createTRPCRouter({
             }
 
             // Create Xendit invoice
-            const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+            const baseUrl = input.redirect_url ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+
+            const successRedirectUrl = input.redirect_url
+                ? input.redirect_url
+                : `${baseUrl}/transactions/${input.transaction_id}?status=success`;
+
+            const failureRedirectUrl = input.redirect_url
+                ? input.redirect_url
+                : `${baseUrl}/transactions/${input.transaction_id}?status=failed`;
+
             const invoice = await createXenditInvoice({
                 externalId: input.transaction_id,
                 amount: transaction.transaction_amount,
                 payerEmail: transaction.buyer.email,
                 description: `DigiSecond: ${transaction.listing.title}`,
                 itemName: transaction.listing.title,
-                successRedirectUrl: `${baseUrl}/transactions/${input.transaction_id}?status=success`,
-                failureRedirectUrl: `${baseUrl}/transactions/${input.transaction_id}?status=failed`,
+                successRedirectUrl: successRedirectUrl,
+                failureRedirectUrl: failureRedirectUrl,
             });
 
             // Create or update payment record
