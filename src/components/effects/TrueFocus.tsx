@@ -42,7 +42,11 @@ const TrueFocus: React.FC<TrueFocusProps> = ({
         if (!manualMode) {
             const interval = setInterval(
                 () => {
-                    setCurrentIndex(prev => (prev + 1) % words.length);
+                    if (words.length === 1) {
+                        setCurrentIndex(prev => (prev === 0 ? -1 : 0));
+                    } else {
+                        setCurrentIndex(prev => (prev + 1) % words.length);
+                    }
                 },
                 (animationDuration + pauseBetweenAnimations) * 1000
             );
@@ -81,7 +85,7 @@ const TrueFocus: React.FC<TrueFocusProps> = ({
 
     return (
         <div
-            className="relative flex gap-4 justify-start items-center flex-wrap"
+            className="relative inline-flex gap-4 justify-start items-center flex-wrap"
             ref={containerRef}
             style={{ outline: 'none', userSelect: 'none' }}
         >

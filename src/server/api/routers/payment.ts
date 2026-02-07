@@ -11,6 +11,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { PaymentStatus, TransactionStatus, ListingStatus } from "@prisma/client";
 import { createXenditInvoice } from "@/lib/xendit";
 import { checkRateLimit, userRateLimitKey } from "@/lib/rate-limit";
+import { getPlatformConfig } from "@/server/config";
 
 const createPaymentInput = z.object({
     transaction_id: z.string().uuid("ID transaksi tidak valid"),
@@ -121,6 +122,11 @@ export const paymentRouter = createTRPCRouter({
                 ? input.redirect_url
                 : `${baseUrl}/transactions/${input.transaction_id}?status=failed`;
 
+            // Get system config
+            const config = await getPlatformConfig(ctx.db);
+            // Convert hours to seconds
+            const invoiceDurationSeconds = config.paymentTimeoutHours * 3600;
+
             const invoice = await createXenditInvoice({
                 externalId: input.transaction_id,
                 amount: transaction.transaction_amount,
@@ -129,7 +135,7 @@ export const paymentRouter = createTRPCRouter({
                 itemName: transaction.listing.title,
                 successRedirectUrl: successRedirectUrl,
                 failureRedirectUrl: failureRedirectUrl,
-            });
+            }, invoiceDurationSeconds);
 
             // Create or update payment record
             const payment = await ctx.db.payment.upsert({

@@ -370,7 +370,6 @@ describe("Admin Router", () => {
                 caller.admin.resolveDispute({
                     dispute_id: "any-id",
                     resolution: "FULL_REFUND",
-                    status: "RESOLVED",
                 })
             ).rejects.toThrow(TRPCError);
         });
@@ -428,12 +427,9 @@ describe("Admin Router", () => {
             const result = await caller.admin.resolveDispute({
                 dispute_id: dispute.dispute_id,
                 resolution: "FULL_REFUND",
-                status: "RESOLVED",
             });
 
-            expect(result.status).toBe("RESOLVED");
             expect(result.resolution).toBe("FULL_REFUND");
-            expect(result.resolved_at).not.toBeNull();
         });
 
         it("should support PARTIAL_REFUND resolution", async () => {
@@ -488,7 +484,6 @@ describe("Admin Router", () => {
             const result = await caller.admin.resolveDispute({
                 dispute_id: dispute.dispute_id,
                 resolution: "PARTIAL_REFUND",
-                status: "RESOLVED",
             });
 
             expect(result.resolution).toBe("PARTIAL_REFUND");
@@ -546,7 +541,6 @@ describe("Admin Router", () => {
             const result = await caller.admin.resolveDispute({
                 dispute_id: dispute.dispute_id,
                 resolution: "NO_REFUND",
-                status: "RESOLVED",
             });
 
             expect(result.resolution).toBe("NO_REFUND");
@@ -560,7 +554,6 @@ describe("Admin Router", () => {
                     dispute_id: "some-id",
                     // @ts-expect-error Invalid enum
                     resolution: "INVALID_RESOLUTION",
-                    status: "RESOLVED",
                 })
             ).rejects.toThrow();
         });
@@ -611,7 +604,6 @@ describe("Admin Router", () => {
                 caller.admin.resolveDispute({
                     dispute_id: "non-existent-dispute-xyz",
                     resolution: "FULL_REFUND",
-                    status: "RESOLVED",
                 })
             ).rejects.toThrow();
         });

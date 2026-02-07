@@ -152,7 +152,7 @@ model Listing {
   bids            Bid[]
   category        Category       @relation(fields: [category_id], references: [category_id])
   seller          User           @relation(fields: [seller_id], references: [user_id])
-  transaction     Transaction?
+  transactions    Transaction[]
 
   @@index([seller_id])
   @@index([category_id])
@@ -185,7 +185,7 @@ model Bid {
 /// Central entity yang menghubungkan buyer, seller, listing, payment
 model Transaction {
   transaction_id        String            @id @default(uuid())
-  listing_id            String            @unique
+  listing_id            String
   buyer_id              String
   seller_id             String
   transaction_amount    Int
@@ -207,6 +207,7 @@ model Transaction {
   listing               Listing           @relation(fields: [listing_id], references: [listing_id])
   seller                User              @relation("Seller", fields: [seller_id], references: [user_id])
 
+  @@index([listing_id])
   @@index([buyer_id])
   @@index([seller_id])
   @@index([status])
@@ -391,6 +392,17 @@ model RateLimit {
 
   @@index([expires_at])
   @@map("t_rate_limits")
+}
+
+/// SystemConfig: Platform configuration values
+/// Replaces static environment variables for dynamic control
+model SystemConfig {
+  key         String   @id
+  value       String
+  description String?
+  updated_at  DateTime @default(now()) @updatedAt
+
+  @@map("m_system_configs")
 }
 
 enum UserRole {

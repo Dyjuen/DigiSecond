@@ -50,7 +50,8 @@ interface InvoiceResponse {
  * @returns Invoice response with payment URL
  */
 export async function createXenditInvoice(
-    params: CreateInvoiceParams
+    params: CreateInvoiceParams,
+    invoiceDurationSeconds = 86400 // Default 24h if not provided
 ): Promise<InvoiceResponse> {
     // In development without Xendit key, return mock
     if (!xenditClient) {
@@ -62,7 +63,7 @@ export async function createXenditInvoice(
             invoiceUrl: `https://checkout-staging.xendit.co/web/${mockId}`,
             amount: params.amount,
             status: "PENDING",
-            expiryDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            expiryDate: new Date(Date.now() + invoiceDurationSeconds * 1000),
         };
     }
 
@@ -72,7 +73,7 @@ export async function createXenditInvoice(
                 externalId: params.externalId,
                 amount: params.amount,
                 description: params.description,
-                invoiceDuration: "86400", // 24 hours in seconds (string per SDK)
+                invoiceDuration: invoiceDurationSeconds.toString(),
                 customer: {
                     email: params.payerEmail,
                 },
@@ -96,7 +97,7 @@ export async function createXenditInvoice(
             invoiceUrl: invoice.invoiceUrl,
             amount: invoice.amount,
             status: invoice.status,
-            expiryDate: invoice.expiryDate ? new Date(invoice.expiryDate) : new Date(Date.now() + 24 * 60 * 60 * 1000),
+            expiryDate: invoice.expiryDate ? new Date(invoice.expiryDate) : new Date(Date.now() + invoiceDurationSeconds * 1000),
         };
     } catch (error) {
         console.error("Xendit invoice creation failed:", error);
@@ -105,33 +106,41 @@ export async function createXenditInvoice(
 }
 
 /**
- * Platform fee percentage
+ * Platform fee percentage (default is now handled by config.ts / DB)
  */
-export const PLATFORM_FEE_PERCENTAGE = 0.05; // 5%
+// export const PLATFORM_FEE_PERCENTAGE = 0.05; // Moved to DB
 
 /**
  * Calculate platform fee and seller payout
+ * @param transactionAmount Total amount paid by buyer
+ * @param feePercentage Platform fee percentage (e.g. 0.05 for 5%)
  */
-export function calculateFees(transactionAmount: number): {
+export function calculateFees(transactionAmount: number, feePercentage: number): {
     platformFee: number;
     sellerPayout: number;
 } {
-    const platformFee = Math.floor(transactionAmount * PLATFORM_FEE_PERCENTAGE);
+    const platformFee = Math.floor(transactionAmount * feePercentage);
     const sellerPayout = transactionAmount - platformFee;
 
     return { platformFee, sellerPayout };
 }
 
 /**
- * Verification period duration in milliseconds (24 hours)
+ * Verification period duration in milliseconds (default now handled by config / DB)
  */
-export const VERIFICATION_PERIOD_MS = 24 * 60 * 60 * 1000;
+// export const VERIFICATION_PERIOD_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Calculate verification deadline from transfer time
+ * @param transferTime Date object
+ * @param verificationPeriodHours Number of hours
  */
-export function calculateVerificationDeadline(transferTime: Date = new Date()): Date {
-    return new Date(transferTime.getTime() + VERIFICATION_PERIOD_MS);
+export function calculateVerificationDeadline(
+    transferTime: Date = new Date(),
+    verificationPeriodHours: number
+): Date {
+    const periodMs = verificationPeriodHours * 60 * 60 * 1000;
+    return new Date(transferTime.getTime() + periodMs);
 }
 
 /**

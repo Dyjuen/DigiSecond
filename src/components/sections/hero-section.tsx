@@ -60,24 +60,20 @@ export function HeroSection() {
 
                         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
                             {/* Left Content */}
-                            <div>
+                            <div className="relative z-30">
                                 <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 sm:mb-6 text-zinc-900 dark:text-white leading-[1.1] tracking-tight">
                                     Trading Digital <br /> Goods{" "}
-                                    <div className="mt-2 text-brand-primary flex items-center gap-3">
+                                    <div className="mt-2 text-brand-primary flex flex-wrap items-center gap-3">
                                         <div className="relative inline-flex items-center">
-                                            <span className="text-brand-primary/40 -mr-1 text-5xl md:text-6xl font-light">[</span>
                                             <TrueFocus
-                                                sentence="Aman"
+                                                sentence="Aman & Terpercaya"
                                                 manualMode={false}
                                                 blurAmount={5}
                                                 borderColor="#6366f1"
                                                 animationDuration={0.5}
                                                 pauseBetweenAnimations={1}
                                             />
-                                            <span className="text-brand-primary/40 -ml-1 text-5xl md:text-6xl font-light">]</span>
                                         </div>
-                                        <span className="text-zinc-400">&</span>
-                                        <span className="text-zinc-900 dark:text-white">Terpercaya</span>
                                     </div>
                                 </h1>
 
@@ -130,21 +126,28 @@ export function HeroSection() {
                                 </div>
                             </div>
 
-                            <div className="relative group/card h-full">
+                            <div className="relative group/card h-full perspective-[1000px]">
+                                {/* Glow Effect behind card */}
+                                <div className="absolute -inset-1 bg-gradient-to-r from-brand-primary to-purple-600 rounded-2xl blur-xl opacity-30 group-hover/card:opacity-60 transition duration-500"></div>
+
                                 {isLoading ? (
-                                    <Card className="shadow-2xl overflow-hidden border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md h-[400px] flex items-center justify-center">
-                                        <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
-                                    </Card>
+                                    <div className="relative h-[400px] w-full rounded-2xl bg-zinc-900/90 border border-zinc-800 backdrop-blur-xl flex items-center justify-center shadow-2xl">
+                                        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+                                    </div>
                                 ) : listings.length > 0 ? (
-                                    <Card className="shadow-2xl overflow-hidden border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md hover:border-brand-primary/50 transition-all duration-300 h-full flex flex-col">
-                                        <div className="p-4 sm:p-6 border-b border-zinc-100 dark:border-zinc-800">
-                                            <div className="flex items-center justify-between mb-3 sm:mb-4">
-                                                <CardTitle className="text-base sm:text-lg text-zinc-900 dark:text-white">Featured Listings</CardTitle>
-                                                <Badge variant="outline" className="text-[10px] sm:text-xs border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400">Live</Badge>
+                                    <div className="relative h-full rounded-2xl bg-zinc-900/80 border border-zinc-800/50 backdrop-blur-xl shadow-2xl overflow-hidden hover:border-brand-primary/30 transition-all duration-300 flex flex-col">
+                                        {/* Card Header with Glass effect */}
+                                        <div className="p-6 border-b border-zinc-800/50 bg-white/5 dark:bg-black/20">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                                    <h3 className="text-lg font-bold text-white tracking-tight">Featured Listings</h3>
+                                                </div>
+                                                <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-zinc-700 text-zinc-400 bg-zinc-800/50">Live Market</Badge>
                                             </div>
 
-                                            {/* Listing tabs */}
-                                            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                                            {/* Listing Tabs */}
+                                            <div className="flex gap-2 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none">
                                                 {listings.map((listing, idx) => (
                                                     <button
                                                         key={listing.listing_id}
@@ -152,9 +155,9 @@ export function HeroSection() {
                                                             e.stopPropagation();
                                                             setSelectedListing(idx);
                                                         }}
-                                                        className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${selectedListing === idx
-                                                            ? "bg-brand-primary text-white shadow-md shadow-brand-primary/20"
-                                                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-300 border ${selectedListing === idx
+                                                            ? "bg-brand-primary/20 border-brand-primary text-brand-primary shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                                                            : "bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                                                             }`}
                                                     >
                                                         {listing.game}
@@ -163,57 +166,152 @@ export function HeroSection() {
                                             </div>
                                         </div>
 
-                                        <CardContent className="p-4 sm:p-6 flex-1 flex flex-col">
-                                            <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
-                                                <Avatar
-                                                    name={listings[selectedListing].seller?.name || "Premium Seller"}
-                                                    size="lg"
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-zinc-900 dark:text-white text-sm sm:text-base truncate">
-                                                        {listings[selectedListing].seller?.name || "Premium Seller"}
-                                                    </p>
-                                                    <div className="flex items-center gap-0.5 text-amber-500">
-                                                        {"★★★★★".split("").map((star, i) => (
-                                                            <span key={i} className="text-xs sm:text-sm">{star}</span>
-                                                        ))}
-                                                        <span className="text-[10px] sm:text-xs text-zinc-500 ml-1">(4.9)</span>
+                                        {/* Card Content */}
+                                        <div className="p-6 flex-1 flex flex-col relative">
+                                            {/* Background Gradient Mesh */}
+                                            <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 via-transparent to-transparent pointer-events-none" />
+
+                                            <div className="relative z-10 flex items-start gap-4 mb-4">
+                                                <div className="relative">
+                                                    <Avatar
+                                                        name={listings[selectedListing].seller?.name || "Premium Seller"}
+                                                        size="lg"
+                                                    />
+                                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-zinc-900 flex items-center justify-center">
+                                                        <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
                                                     </div>
                                                 </div>
-                                                <Badge variant="success" className="text-[10px] sm:text-xs flex-shrink-0">Verified</Badge>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-white text-base truncate">
+                                                        {listings[selectedListing].seller?.name || "Premium Seller"}
+                                                    </p>
+                                                    <div className="flex items-center gap-1 mt-0.5">
+                                                        <div className="flex text-amber-500">
+                                                            {"★★★★★".split("").map((star, i) => (
+                                                                <span key={i} className="text-xs">{star}</span>
+                                                            ))}
+                                                        </div>
+                                                        <span className="text-[10px] text-zinc-500 font-medium ml-1">4.9/5.0</span>
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            <Link href={`/listings/${listings[selectedListing].listing_id}`} className="group/title">
-                                                <CardTitle className="text-lg sm:text-xl mb-2 line-clamp-2 text-zinc-900 dark:text-white group-hover/title:text-brand-primary transition-colors">
+                                            <Link href={`/listings/${listings[selectedListing].listing_id}`} className="group/title relative z-10 block">
+                                                <h4 className="text-xl font-black text-white mb-2 line-clamp-2 leading-tight group-hover/title:text-brand-primary transition-colors">
                                                     {listings[selectedListing].title}
-                                                </CardTitle>
+                                                </h4>
                                             </Link>
-                                            <CardDescription className="mb-4 text-xs sm:text-sm line-clamp-2 text-zinc-600 dark:text-zinc-400">
-                                                {listings[selectedListing].description || "Akun premium dengan berbagai fitur eksklusif. Garansi 30 hari dan support penuh."}
-                                            </CardDescription>
 
-                                            <div className="mt-auto flex items-center justify-between pt-3 sm:pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                            <p className="text-sm text-zinc-400 line-clamp-2 mb-6 relative z-10 leading-relaxed">
+                                                {listings[selectedListing].description || "Akun premium dengan berbagai fitur eksklusif. Garansi 30 hari dan support penuh."}
+                                            </p>
+
+                                            <div className="mt-auto pt-4 border-t border-zinc-800/50 flex items-center justify-between relative z-10">
                                                 <div>
-                                                    <p className="text-[10px] sm:text-xs text-zinc-500">Harga</p>
-                                                    <p className="text-xl sm:text-2xl font-bold text-brand-primary">
-                                                        Rp {listings[selectedListing].price.toLocaleString("id-ID")}
-                                                    </p>
+                                                    <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-0.5">Current Price</p>
+                                                    <div className="flex items-baseline gap-1">
+                                                        <span className="text-sm font-semibold text-brand-primary">Rp</span>
+                                                        <span className="text-2xl font-black text-white tracking-tight">
+                                                            {listings[selectedListing].price.toLocaleString("id-ID")}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <Link href={`/listings/${listings[selectedListing].listing_id}`}>
-                                                    <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9">
-                                                        Lihat Detail
-                                                        <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                        </svg>
+                                                    <Button className="h-10 px-5 bg-white text-black hover:bg-zinc-200 font-bold rounded-xl transition-transform hover:-translate-y-0.5">
+                                                        Beli Sekarang
                                                     </Button>
                                                 </Link>
                                             </div>
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <Card className="shadow-2xl overflow-hidden border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md h-[400px] flex items-center justify-center">
-                                        <p className="text-zinc-500">No featured listings found.</p>
-                                    </Card>
+                                    // FALLBACK: Use hardcoded featured listings if API is empty/error
+                                    <div className="relative h-full rounded-2xl bg-zinc-900/80 border border-zinc-800/50 backdrop-blur-xl shadow-2xl overflow-hidden hover:border-brand-primary/30 transition-all duration-300 flex flex-col">
+                                        {/* Card Header with Glass effect */}
+                                        <div className="p-6 border-b border-zinc-800/50 bg-white/5 dark:bg-black/20">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                                    <h3 className="text-lg font-bold text-white tracking-tight">Featured Listings</h3>
+                                                </div>
+                                                <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-zinc-700 text-zinc-400 bg-zinc-800/50">Hot Picks</Badge>
+                                            </div>
+
+                                            {/* Listing Tabs */}
+                                            <div className="flex gap-2 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none">
+                                                {featuredListings.map((listing, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedListing(idx);
+                                                        }}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-300 border ${selectedListing === idx
+                                                            ? "bg-brand-primary/20 border-brand-primary text-brand-primary shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                                                            : "bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                                                            }`}
+                                                    >
+                                                        {listing.game}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Card Content */}
+                                        <div className="p-6 flex-1 flex flex-col relative">
+                                            {/* Background Gradient Mesh */}
+                                            <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 via-transparent to-transparent pointer-events-none" />
+
+                                            <div className="relative z-10 flex items-start gap-4 mb-4">
+                                                <div className="relative">
+                                                    <Avatar
+                                                        name={featuredListings[selectedListing].seller}
+                                                        size="lg"
+                                                    />
+                                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-zinc-900 flex items-center justify-center">
+                                                        <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-white text-base truncate">
+                                                        {featuredListings[selectedListing].seller}
+                                                    </p>
+                                                    <div className="flex items-center gap-1 mt-0.5">
+                                                        <div className="flex text-amber-500">
+                                                            {"★★★★★".split("").map((star, i) => (
+                                                                <span key={i} className="text-xs">{star}</span>
+                                                            ))}
+                                                        </div>
+                                                        <span className="text-[10px] text-zinc-500 font-medium ml-1">4.9/5.0</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <h4 className="text-xl font-black text-white mb-2 line-clamp-2 leading-tight relative z-10">
+                                                {featuredListings[selectedListing].title}
+                                            </h4>
+
+                                            <p className="text-sm text-zinc-400 line-clamp-2 mb-6 relative z-10 leading-relaxed">
+                                                Akun premium dengan berbagai fitur eksklusif. Garansi 30 hari dan support penuh.
+                                            </p>
+
+                                            <div className="mt-auto pt-4 border-t border-zinc-800/50 flex items-center justify-between relative z-10">
+                                                <div>
+                                                    <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-0.5">Best Price</p>
+                                                    <div className="flex items-baseline gap-1">
+                                                        <span className="text-xl font-black text-white tracking-tight">
+                                                            {featuredListings[selectedListing].price}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <Link href="/listings">
+                                                    <Button className="h-10 px-5 bg-white text-black hover:bg-zinc-200 font-bold rounded-xl transition-transform hover:-translate-y-0.5">
+                                                        Lihat Detail
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -261,6 +359,6 @@ export function HeroSection() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

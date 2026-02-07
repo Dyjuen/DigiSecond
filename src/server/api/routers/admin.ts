@@ -98,6 +98,14 @@ export const adminRouter = createTRPCRouter({
             });
         }),
 
+    approveAllPending: adminProcedure
+        .mutation(async ({ ctx }) => {
+            return ctx.db.listing.updateMany({
+                where: { status: ListingStatus.PENDING },
+                data: { status: ListingStatus.ACTIVE }
+            });
+        }),
+
     getAllListings: adminProcedure.query(async ({ ctx }) => {
         return ctx.db.listing.findMany({
             include: {
@@ -143,6 +151,20 @@ export const adminRouter = createTRPCRouter({
                         listing: {
                             select: {
                                 title: true
+                            }
+                        },
+                        buyer: {
+                            select: {
+                                name: true,
+                                email: true,
+                                avatar_url: true
+                            }
+                        },
+                        seller: {
+                            select: {
+                                name: true,
+                                email: true,
+                                avatar_url: true
                             }
                         }
                     }
@@ -374,6 +396,27 @@ export const adminRouter = createTRPCRouter({
                     });
                 }
 
+                // Send System Message to Chat
+                let systemMessageContent = "";
+                if (input.resolution === "FULL_REFUND") {
+                    systemMessageContent = "SYSTEM: Dispute resolved. Full refund issued to buyer.";
+                } else if (input.resolution === "NO_REFUND") {
+                    systemMessageContent = "SYSTEM: Dispute resolved. Funds released to seller.";
+                } else if (input.resolution === "PARTIAL_REFUND") {
+                    systemMessageContent = `SYSTEM: Dispute resolved with partial refund of Rp ${input.partial_refund_amount?.toLocaleString("id-ID")}.`;
+                }
+
+                if (systemMessageContent) {
+                    await tx.message.create({
+                        data: {
+                            transaction_id: dispute.transaction_id,
+                            sender_user_id: adminId,
+                            message_content: systemMessageContent,
+                            is_read: false
+                        }
+                    });
+                }
+
                 // Audit log
                 await tx.auditLog.create({
                     data: {
@@ -398,5 +441,94 @@ export const adminRouter = createTRPCRouter({
                 dispute_id: input.dispute_id,
                 resolution: input.resolution,
             };
+        }),
+    getTransactions: adminProcedure.query(async ({ ctx }) => {
+        return ctx.db.transaction.findMany({
+            include: {
+                buyer: {
+                    select: { name: true, email: true }
+                },
+                seller: {
+                    select: { name: true, email: true }
+                },
+                listing: {
+                    select: { title: true }
+                }
+            },
+            orderBy: { created_at: "desc" },
+            take: 100 // Limit for now
+        });
+    }),
+
+    getChatMessages: adminProcedure
+        .input(z.object({ transaction_id: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const transaction = await ctx.db.transaction.findUnique({
+                where: { transaction_id: input.transaction_id },
+                select: { buyer_id: true, seller_id: true }
+            });
+
+            if (!transaction) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Transaction not found"
+                });
+            }
+
+            const messages = await ctx.db.message.findMany({
+                where: { transaction_id: input.transaction_id },
+                include: {
+                    sender: {
+                        select: { name: true, role: true, user_id: true }
+                    }
+                },
+                orderBy: { created_at: "asc" }
+            });
+
+            return messages.map(msg => ({
+                ...msg,
+                sender: {
+                    ...msg.sender,
+                    role: msg.sender.user_id === transaction.buyer_id ? "buyer" : "seller"
+                }
+            }));
+        }),
+
+    getUserDetails: adminProcedure
+        .input(z.object({ user_id: z.string() }))
+        .query(async ({ ctx, input }) => {
+            return ctx.db.user.findUnique({
+                where: { user_id: input.user_id },
+                select: {
+                    user_id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    is_verified: true,
+                    is_suspended: true,
+                    created_at: true,
+                    updated_at: true,
+                    avatar_url: true,
+                    id_card_url: true,
+                    listings: {
+                        orderBy: { created_at: "desc" },
+                        take: 10,
+                        select: {
+                            listing_id: true,
+                            title: true,
+                            price: true,
+                            status: true,
+                            created_at: true,
+                            photo_urls: true
+                        }
+                    },
+                    _count: {
+                        select: {
+                            sales: true,
+                            purchases: true
+                        }
+                    }
+                }
+            });
         }),
 });

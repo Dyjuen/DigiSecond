@@ -213,10 +213,6 @@ export default function AdminDashboard() {
                         Monitor your platform metrics and activity in real-time
                     </p>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-zinc-100 dark:bg-zinc-800/50 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700/50 outline outline-4 outline-zinc-100/50 dark:outline-zinc-800/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Live System Status
-                </div>
             </div>
 
             {/* Stats Grid */}

@@ -29,7 +29,7 @@ const config: Config = {
                 info: "#06b6d4",
             },
             fontFamily: {
-                sans: ["-apple-system", "BlinkMacSystemFont", "SF Pro Display", "SF Pro Text", "system-ui", "sans-serif"],
+                sans: ["-apple-system", "BlinkMacSystemFont", "SF Pro Display", "SF Pro Text", "var(--font-sans)", "system-ui", "sans-serif"],
             },
             backgroundImage: {
                 "gradient-primary": "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",

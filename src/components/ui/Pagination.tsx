@@ -124,17 +124,14 @@ export function Pagination({
     );
 }
 
-function PageButton({
-    page,
-    active,
-    onClick,
-}: {
+const PageButton = React.forwardRef<HTMLButtonElement, {
     page: number;
     active: boolean;
     onClick: () => void;
-}) {
+}>(({ page, active, onClick }, ref) => {
     return (
         <motion.button
+            ref={ref}
             layout
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -159,4 +156,5 @@ function PageButton({
             <span className="relative z-10">{page}</span>
         </motion.button>
     );
-}
+});
+PageButton.displayName = "PageButton";

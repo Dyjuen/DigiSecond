@@ -1,4 +1,4 @@
-
+import { ListingStatus } from "@prisma/client";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
@@ -22,7 +22,7 @@ export const listingRouter = createTRPCRouter({
             const { limit, page, cursor, type, category, search, minPrice, maxPrice, sortBy } = input;
 
             const where: any = {
-                status: "ACTIVE",
+                status: ListingStatus.ACTIVE,
             };
 
             if (type) {

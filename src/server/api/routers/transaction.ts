@@ -11,6 +11,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TransactionStatus, PaymentStatus, ListingStatus } from "@prisma/client";
 import { checkRateLimit, userRateLimitKey } from "@/lib/rate-limit";
 import { calculateFees, calculateVerificationDeadline, isVerificationExpired } from "@/lib/xendit";
+import { getPlatformConfig } from "@/server/config";
 
 const createTransactionInput = z.object({
     listing_id: z.string().uuid("ID listing tidak valid"),
@@ -64,17 +65,20 @@ export const transactionRouter = createTRPCRouter({
             const userId = session.user.id;
 
             // Rate limit check: 10 transactions per hour per user
-            const rateLimit = await checkRateLimit(
-                userRateLimitKey("transaction.create", userId),
-                10,
-                3600
-            );
-            if (!rateLimit.success) {
-                throw new TRPCError({
-                    code: "TOO_MANY_REQUESTS",
-                    message: "Terlalu banyak transaksi. Coba lagi dalam 1 jam.",
-                });
+            if (process.env.ENABLE_RATE_LIMIT !== "false") {
+                const rateLimit = await checkRateLimit(
+                    userRateLimitKey("transaction.create", userId),
+                    10,
+                    3600
+                );
+                if (!rateLimit.success) {
+                    throw new TRPCError({
+                        code: "TOO_MANY_REQUESTS",
+                        message: "Terlalu banyak transaksi. Coba lagi dalam 1 jam.",
+                    });
+                }
             }
+
 
             // KYC verification check
             const user = await db.user.findUnique({
@@ -111,35 +115,64 @@ export const transactionRouter = createTRPCRouter({
             }
 
             if (listing.status !== ListingStatus.ACTIVE) {
+                // Special handling for PENDING status
+                if (listing.status === ListingStatus.PENDING) {
+                    const userTransaction = await db.transaction.findFirst({
+                        where: {
+                            listing_id: input.listing_id,
+                            buyer_id: userId,
+                            status: "PENDING_PAYMENT"
+                        }
+                    });
+
+                    if (userTransaction) {
+                        throw new TRPCError({
+                            code: "CONFLICT",
+                            message: "Anda sudah memesan item ini. Silakan selesaikan pembayaran di menu Transaksi Saya.",
+                        });
+                    }
+
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Maaf, item ini sedang dalam proses pembayaran oleh pembeli lain. Silakan coba lagi nanti.",
+                    });
+                }
+
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: "Listing tidak tersedia untuk dibeli",
+                    message: `Item tidak tersedia saat ini (Status: ${listing.status})`,
                 });
             }
 
             if (listing.seller_id === userId) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: "Tidak dapat membeli listing sendiri",
+                    message: "Anda tidak dapat membeli item jualan Anda sendiri.",
                 });
             }
 
             // Check for existing pending transaction on this listing
-            const existingTx = await db.transaction.findUnique({
-                where: { listing_id: input.listing_id },
+            const existingTx = await db.transaction.findFirst({
+                where: {
+                    listing_id: input.listing_id,
+                    status: { not: TransactionStatus.CANCELLED }
+                },
                 select: { status: true },
             });
 
-            if (existingTx && existingTx.status !== TransactionStatus.CANCELLED) {
+            if (existingTx) {
                 throw new TRPCError({
                     code: "CONFLICT",
-                    message: "Listing sedang dalam proses transaksi",
+                    message: "Item ini sudah dipesan oleh pengguna lain. Mohon tunggu.",
                 });
             }
 
             // Calculate amounts: use current_bid for auctions, price for fixed
             const transactionAmount = listing.current_bid ?? listing.price;
-            const { platformFee, sellerPayout } = calculateFees(transactionAmount);
+
+            // Get system config
+            const config = await getPlatformConfig(db);
+            const { platformFee, sellerPayout } = calculateFees(transactionAmount, config.platformFeePercentage);
 
             // Create transaction with payment record in a transaction
             const transaction = await db.$transaction(async (tx) => {
@@ -306,6 +339,7 @@ export const transactionRouter = createTRPCRouter({
                 include: {
                     listing: {
                         select: {
+                            listing_id: true,
                             title: true,
                             photo_urls: true,
                         },
@@ -385,7 +419,8 @@ export const transactionRouter = createTRPCRouter({
             }
 
             const now = new Date();
-            const verificationDeadline = calculateVerificationDeadline(now);
+            const config = await getPlatformConfig(ctx.db);
+            const verificationDeadline = calculateVerificationDeadline(now, config.verificationPeriodHours);
 
             // Update transaction
             const updated = await ctx.db.transaction.update({
@@ -629,5 +664,93 @@ export const transactionRouter = createTRPCRouter({
             });
 
             return { success: true };
+        }),
+
+    /**
+     * Get list of chats for the Global Chat Widget
+     * Returns transactions with latest message and unread count
+     */
+    getChatList: protectedProcedure
+        .query(async ({ ctx }) => {
+            const userId = ctx.session.user.id;
+
+            const transactions = await ctx.db.transaction.findMany({
+                where: {
+                    OR: [{ buyer_id: userId }, { seller_id: userId }],
+                    // Only show transactions that have at least one message
+                    messages: { some: {} }
+                },
+                include: {
+                    listing: {
+                        select: {
+                            listing_id: true,
+                            title: true,
+                            photo_urls: true,
+                        }
+                    },
+                    buyer: {
+                        select: {
+                            user_id: true,
+                            name: true,
+                            avatar_url: true,
+                        }
+                    },
+                    seller: {
+                        select: {
+                            user_id: true,
+                            name: true,
+                            avatar_url: true,
+                        }
+                    },
+                    messages: {
+                        orderBy: { created_at: 'desc' },
+                        take: 1,
+                        select: {
+                            message_content: true,
+                            created_at: true,
+                        }
+                    },
+                    // Count unread messages from OTHER person
+                    _count: {
+                        select: {
+                            messages: {
+                                where: {
+                                    sender_user_id: { not: userId },
+                                    is_read: false
+                                }
+                            }
+                        }
+                    }
+                },
+                // Initial sort by updated_at, we will refine in JS
+                orderBy: { updated_at: 'desc' }
+            });
+
+            // Format and sort by latest message time OR transaction time
+            const chats = transactions.map(t => {
+                const isBuyer = t.buyer_id === userId;
+                const partner = isBuyer ? t.seller : t.buyer;
+                const lastMessage = t.messages[0];
+
+                // Determine sort time: last message time or transaction update time
+                const sortTime = lastMessage ? lastMessage.created_at.getTime() : t.updated_at.getTime();
+
+                return {
+                    id: t.transaction_id,
+                    partnerName: partner.name || "Unknown User",
+                    partnerAvatar: partner.avatar_url,
+                    lastMessage: lastMessage?.message_content || "Belum ada pesan",
+                    timestamp: lastMessage ? lastMessage.created_at : t.updated_at,
+                    sortTime,
+                    unread: t._count.messages,
+                    listingTitle: t.listing.title,
+                    listingImage: t.listing.photo_urls[0] || "",
+                    status: t.status,
+                    listingId: t.listing.listing_id // needed for navigation if clicked?
+                };
+            });
+
+            // Sort descending
+            return chats.sort((a, b) => b.sortTime - a.sortTime);
         }),
 });

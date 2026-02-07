@@ -50,13 +50,14 @@ export interface TransactionChatProps {
 
 function mapBackendStatus(status: string): TransactionStatus {
     switch (status) {
-        case "PENDING": return "PENDING_PAYMENT";
+        case "PENDING_PAYMENT": return "PENDING_PAYMENT";
         case "PAID": return "PAID";
-        case "TRANSFERRED": return "ITEM_SENT";
+        case "ITEM_TRANSFERRED": return "ITEM_SENT";
         case "COMPLETED": return "COMPLETED";
         case "CANCELLED": return "CANCELLED";
         case "DISPUTED": return "DISPUTED";
         case "REFUNDED": return "REFUNDED";
+        case "VERIFIED": return "VERIFIED";
         default: return "INQUIRY";
     }
 }
@@ -156,10 +157,25 @@ function ReviewSection({ transactionId, sellerName }: { transactionId: string; s
     );
 }
 
+import { uiEvents } from "@/lib/ui-events";
+
 export function TransactionChat(props: TransactionChatProps) {
     const { isOpen, onClose, listing, seller, existingTransactionId } = props;
     const { data: session } = useSession();
     const user = session?.user;
+
+    useEffect(() => {
+        uiEvents.setChatOpen(isOpen);
+        return () => {
+            // If unmounting and was open, we should explicitly close? 
+            // Better to let the parent control or rely on isOpen changing to false.
+            // But if component unmounts (e.g. navigation), we should reset.
+            if (isOpen) uiEvents.setChatOpen(false);
+        };
+    }, [isOpen]);
+
+    console.log("TransactionChat props.listing:", listing);
+
 
     const [transactionId, setTransactionId] = useState<string | null>(existingTransactionId || null);
     const [paymentId, setPaymentId] = useState<string | null>(null);
@@ -280,6 +296,9 @@ export function TransactionChat(props: TransactionChatProps) {
             const backendStatus = mapBackendStatus(transactionData.status);
             if (backendStatus !== transactionStatus) {
                 setTransactionStatus(backendStatus);
+            }
+            if (transactionData.payments?.[0]?.payment_id) {
+                setPaymentId(transactionData.payments[0].payment_id);
             }
         }
     }, [transactionData]);
@@ -474,7 +493,13 @@ export function TransactionChat(props: TransactionChatProps) {
                         {/* Messages */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-3">
                             {localMessages.map((msg) => (
-                                <div key={msg.id} className={`flex ${msg.type === "system" ? "justify-center" : msg.senderId === user?.id ? "justify-end" : "justify-start"}`}>
+                                <motion.div
+                                    key={msg.id}
+                                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                    className={`flex ${msg.type === "system" ? "justify-center" : msg.senderId === user?.id ? "justify-end" : "justify-start"}`}
+                                >
                                     {msg.type === "system" ? (
                                         <div className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-xs text-zinc-500">
                                             {msg.content}
@@ -487,7 +512,7 @@ export function TransactionChat(props: TransactionChatProps) {
                                             </p>
                                         </div>
                                     )}
-                                </div>
+                                </motion.div>
                             ))}
                             <div ref={messagesEndRef} />
                         </div>
@@ -520,6 +545,19 @@ export function TransactionChat(props: TransactionChatProps) {
                                     <Button className="w-full bg-purple-600 hover:bg-purple-700" onClick={handleSellerSendItem} disabled={markTransferred.isPending}>
                                         {markTransferred.isPending ? "Memproses..." : "Tandai Sudah Dikirim"}
                                     </Button>
+                                </div>
+                            )
+                        }
+
+                        {
+                            transactionStatus === "PAID" && isBuyer && (
+                                <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-2">
+                                    <p className="text-sm text-zinc-500">Menunggu penjual mengirim detail item...</p>
+                                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                                            💡 <strong>Info Simulasi:</strong> Silakan login sebagai akun <strong>Penjual</strong> di browser/tab lain untuk memproses pesanan ini (Klik &quot;Tandai Sudah Dikirim&quot;).
+                                        </p>
+                                    </div>
                                 </div>
                             )
                         }

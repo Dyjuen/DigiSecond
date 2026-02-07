@@ -103,6 +103,9 @@ export default function ListingDetailPage() {
     const gameLogo = gameLogoMap[listing.game];
     const isOwner = session?.user?.id === listing.seller.user_id;
 
+    console.log("ListingDetailPage listing:", listing);
+
+
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-16">
             <div className="max-w-6xl mx-auto px-6">

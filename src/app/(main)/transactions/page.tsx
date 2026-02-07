@@ -46,13 +46,19 @@ export default function TransactionsPage() {
     // Fetch transactions as buyer
     const { data: buyerTransactions, isLoading: loadingBuyer } = api.transaction.getActive.useQuery(
         { role: "buyer", limit: 50 },
-        { enabled: sessionStatus === "authenticated" }
+        {
+            enabled: sessionStatus === "authenticated",
+            refetchInterval: 3000
+        }
     );
 
     // Fetch transactions as seller
     const { data: sellerTransactions, isLoading: loadingSeller } = api.transaction.getActive.useQuery(
         { role: "seller", limit: 50 },
-        { enabled: sessionStatus === "authenticated" }
+        {
+            enabled: sessionStatus === "authenticated",
+            refetchInterval: 3000
+        }
     );
 
     const transactions = activeTab === "buyer"
@@ -92,8 +98,8 @@ export default function TransactionsPage() {
                     <button
                         onClick={() => setActiveTab("buyer")}
                         className={`px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === "buyer"
-                                ? "bg-white dark:bg-zinc-800 text-brand-primary shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
-                                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                            ? "bg-white dark:bg-zinc-800 text-brand-primary shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
+                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                             }`}
                     >
                         Pembelian
@@ -106,8 +112,8 @@ export default function TransactionsPage() {
                     <button
                         onClick={() => setActiveTab("seller")}
                         className={`px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === "seller"
-                                ? "bg-white dark:bg-zinc-800 text-brand-primary shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
-                                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                            ? "bg-white dark:bg-zinc-800 text-brand-primary shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
+                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                             }`}
                     >
                         Penjualan
@@ -205,8 +211,8 @@ export default function TransactionsPage() {
                                                 <div key={step} className="flex items-center flex-1">
                                                     <div
                                                         className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${["PENDING", "PAID", "TRANSFERRED", "COMPLETED"].indexOf(tx.status) >= idx
-                                                                ? "bg-brand-primary text-white"
-                                                                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-500"
+                                                            ? "bg-brand-primary text-white"
+                                                            : "bg-zinc-200 dark:bg-zinc-700 text-zinc-500"
                                                             }`}
                                                     >
                                                         {idx + 1}
@@ -214,8 +220,8 @@ export default function TransactionsPage() {
                                                     {idx < 3 && (
                                                         <div
                                                             className={`flex-1 h-1 mx-1 rounded-full ${["PENDING", "PAID", "TRANSFERRED", "COMPLETED"].indexOf(tx.status) > idx
-                                                                    ? "bg-brand-primary"
-                                                                    : "bg-zinc-200 dark:bg-zinc-700"
+                                                                ? "bg-brand-primary"
+                                                                : "bg-zinc-200 dark:bg-zinc-700"
                                                                 }`}
                                                         />
                                                     )}

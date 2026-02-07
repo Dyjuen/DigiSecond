@@ -8,6 +8,7 @@ import { paymentRouter } from "./routers/payment";
 import { disputeRouter } from "./routers/dispute";
 import { messageRouter } from "./routers/message";
 import { reviewRouter } from "./routers/review";
+import { systemConfigRouter } from "./routers/systemConfig";
 
 import { categoryRouter } from "./routers/category";
 
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
     user: userRouter,
     listing: listingRouter,
     transaction: transactionRouter,
+    systemConfig: systemConfigRouter,
     payment: paymentRouter,
     dispute: disputeRouter,
     message: messageRouter,

@@ -130,7 +130,7 @@ export function EnhancedHeader() {
                                             <button
                                                 onClick={() => {
                                                     setShowUserMenu(false);
-                                                    signOut({ callbackUrl: "/admin-login" });
+                                                    signOut({ callbackUrl: "/" });
                                                 }}
                                                 className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-2xl transition-all"
                                             >

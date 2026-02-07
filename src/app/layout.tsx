@@ -7,6 +7,7 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "sonner"; // Added Toaster
 import { TRPCReactProvider } from "@/trpc/react";
+import { GlobalChatWidget } from "@/components/chat/GlobalChatWidget";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -61,6 +62,7 @@ export default function RootLayout({
                         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
                             <Toaster position="top-right" richColors closeButton />
                             {children}
+                            <GlobalChatWidget />
                         </ThemeProvider>
                     </TRPCReactProvider>
                 </AuthProvider>

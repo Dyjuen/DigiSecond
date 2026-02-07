@@ -15,6 +15,7 @@ export default function PendingListings() {
     const { data: listings, isLoading, refetch } = api.admin.getPendingListings.useQuery();
     const approveMutation = api.admin.approveListing.useMutation();
     const rejectMutation = api.admin.rejectListing.useMutation();
+    const approveAllMutation = api.admin.approveAllPending.useMutation();
 
     useEffect(() => {
         if (status === "loading") return;
@@ -51,6 +52,21 @@ export default function PendingListings() {
         }
     };
 
+    // Handler for Approve All
+    const handleApproveAll = async () => {
+        if (!confirm("Yakin ingin menyetujui SEMUA listing pending?")) return;
+        const toastId = toast.loading("Menyetujui semua...");
+        try {
+            await approveAllMutation.mutateAsync();
+            toast.dismiss(toastId);
+            toast.success("Semua listing berhasil disetujui!");
+            refetch();
+        } catch (e) {
+            toast.dismiss(toastId);
+            toast.error("Gagal menyetujui semua listings");
+        }
+    };
+
     if (status === "loading" || isLoading) {
         return (
             <div className="flex h-[50vh] items-center justify-center flex-col gap-4">
@@ -64,11 +80,23 @@ export default function PendingListings() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Moderasi Listing</h1>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                    Setujui atau tolak listing baru dari seller.
-                </p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Moderasi Listing</h1>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                        Setujui atau tolak listing baru dari seller.
+                    </p>
+                </div>
+                {listings && listings.length > 0 && (
+                    <button
+                        onClick={handleApproveAll}
+                        disabled={approveAllMutation.isPending}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                        <Check className="w-4 h-4" />
+                        {approveAllMutation.isPending ? "Memproses..." : "Setujui Semua"}
+                    </button>
+                )}
             </div>
 
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
