@@ -1,8 +1,7 @@
-
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { DisputeStatus, TransactionStatus } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 /**
  * Dispute Router
@@ -318,6 +317,61 @@ export const disputeRouter = createTRPCRouter({
             return {
                 disputes,
                 nextCursor,
+            };
+        }),
+
+    /**
+     * Upload evidence photo
+     * Generates signed URL for Supabase Storage
+     */
+    uploadEvidence: protectedProcedure
+        .input(
+            z.object({
+                fileName: z.string().min(1),
+                fileType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const { fileName, fileType } = input;
+            const userId = ctx.session.user.id;
+
+            const extension = fileType.split("/")[1];
+            // Path: disputes/{userId}/{timestamp}-{random}.{ext}
+            const uniqueName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+            const storagePath = `disputes/${uniqueName}`;
+
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+            if (!supabaseUrl || !supabaseKey) {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Supabase tidak dikonfigurasi",
+                });
+            }
+
+            const { createClient } = await import("@supabase/supabase-js");
+            const supabase = createClient(supabaseUrl, supabaseKey);
+
+            // Use the same "uploads" bucket as listings
+            const { data, error } = await supabase.storage
+                .from("uploads")
+                .createSignedUploadUrl(storagePath);
+
+            if (error) {
+                console.error("Supabase upload error:", error);
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Gagal membuat upload URL",
+                });
+            }
+
+            const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploads/${storagePath}`;
+
+            return {
+                uploadUrl: data.signedUrl,
+                publicUrl,
+                path: storagePath,
             };
         }),
 });
