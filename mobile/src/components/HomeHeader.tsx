@@ -60,11 +60,11 @@ export const HomeHeader = ({
         <Surface style={{ backgroundColor: theme.colors.background }} elevation={0}>
             <SafeAreaView edges={['top']} style={[styles.safeArea, isSearchMode && { paddingTop: 8 }]}>
                 <View style={[styles.container, isSearchMode && { height: 48 }]}>
-                    {/* Back Button (Only in Search Mode) */}
-                    {isSearchMode && (
+                    {/* Back Button (Only in Search Mode or if explicitly enabled) */}
+                    {(isSearchMode || onBack) && (
                         <Animated.View style={{
-                            width: backButtonWidth,
-                            opacity: backButtonOpacity,
+                            width: isSearchMode ? backButtonWidth : 40, // Fixed width if not animating
+                            opacity: isSearchMode ? backButtonOpacity : 1, // Fixed opacity if not animating
                             overflow: 'hidden',
                             justifyContent: 'center',
                             // backButton style has marginRight: 8, we handle spacing via width 
@@ -116,6 +116,11 @@ export const HomeHeader = ({
                     {/* Icons (Hide in Search Mode? User said "keep homeheader", usually minimal icons in search) */}
                     {!isSearchMode && (
                         <View style={styles.iconContainer}>
+                            <IconButton
+                                icon="heart-outline"
+                                size={24}
+                                onPress={() => router.push("/wishlist")}
+                            />
                             <IconButton
                                 icon="bell-outline"
                                 size={24}

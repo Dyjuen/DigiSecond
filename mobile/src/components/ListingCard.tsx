@@ -1,8 +1,10 @@
-import React, { useRef, useState } from "react";
-import { StyleSheet, View, ViewStyle, Animated } from "react-native";
+import React, { useRef, useState, useEffect } from "react";
+import { StyleSheet, View, ViewStyle, Animated, TouchableOpacity } from "react-native";
 import { Text, Card, useTheme, IconButton } from "react-native-paper";
 import { shadows } from "../lib/theme";
 import { useHaptic } from "../hooks/useHaptic";
+import { api as trpc } from "../lib/api";
+import { useAuthStore } from "../stores/authStore";
 
 interface ListingCardProps {
     id: string;
@@ -11,14 +13,80 @@ interface ListingCardProps {
     imageUrl: string;
     onPress: () => void;
     style?: ViewStyle;
+    // Optional props for optimistic updates or passing down data
+    isWishlistedInitial?: boolean;
+    game?: string;
+    server?: string;
+    rating?: number;
+    soldCount?: number;
 }
 
-export function ListingCard({ title, price, imageUrl, onPress, style }: ListingCardProps) {
+export function ListingCard({
+    id,
+    title,
+    price,
+    imageUrl,
+    onPress,
+    style,
+    isWishlistedInitial = false,
+    game,
+    server,
+    rating,
+    soldCount
+}: ListingCardProps) {
     const theme = useTheme();
+    const { user } = useAuthStore();
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const heartScaleAnim = useRef(new Animated.Value(1)).current;
-    const [isLiked, setIsLiked] = useState(false);
     const haptics = useHaptic();
+
+    // Optimistic state
+    const [isLiked, setIsLiked] = useState(isWishlistedInitial);
+
+    // TRPC Utils
+    const utils = trpc.useUtils();
+
+    // Check initial status if logged in
+    const { data: checkData } = trpc.wishlist.check.useQuery(
+        { listingId: id },
+        {
+            enabled: !!user,
+            staleTime: 5 * 60 * 1000, // Cache for 5 mins
+        }
+    );
+
+    useEffect(() => {
+        if (checkData) {
+            setIsLiked(checkData.isWishlisted);
+        }
+    }, [checkData]);
+
+    const toggleMutation = trpc.wishlist.toggle.useMutation({
+        onMutate: async () => {
+            // Cancel outgoing refetches
+            await utils.wishlist.check.cancel({ listingId: id });
+            await utils.wishlist.getUserWishlist.cancel();
+
+            // Snapshot previous value
+            const previousState = isLiked;
+
+            // Optimistically update
+            setIsLiked(!previousState);
+
+            return { previousState };
+        },
+        onError: (err, newTodo, context) => {
+            // Rollback
+            if (context?.previousState !== undefined) {
+                setIsLiked(context.previousState);
+            }
+        },
+        onSettled: () => {
+            // Invalidate to ensure sync
+            utils.wishlist.check.invalidate({ listingId: id });
+            utils.wishlist.getUserWishlist.invalidate();
+        }
+    });
 
     const handlePressIn = () => {
         Animated.spring(scaleAnim, {
@@ -37,8 +105,14 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
     };
 
     const toggleLike = () => {
+        if (!user) {
+            // TODO: Navigate to login or show toast
+            return;
+        }
+
         haptics.trigger('medium');
-        setIsLiked(!isLiked);
+        toggleMutation.mutate({ listingId: id });
+
         Animated.sequence([
             Animated.spring(heartScaleAnim, {
                 toValue: 1.2,
@@ -71,13 +145,17 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
                     {/* @ts-expect-error - RNP typings mismatch for source */}
                     <Card.Cover source={{ uri: imageUrl }} style={styles.image} />
                     <Animated.View style={[styles.favoriteButtonWrapper, { transform: [{ scale: heartScaleAnim }] }]}>
-                        <IconButton
-                            icon={isLiked ? "heart" : "heart-outline"}
-                            iconColor={isLiked ? theme.colors.error : "white"}
-                            size={20}
-                            style={styles.favoriteButton}
+                        <TouchableOpacity
+                            style={[styles.favoriteButton, { backgroundColor: 'rgba(0,0,0,0.3)' }]}
                             onPress={toggleLike}
-                        />
+                        >
+                            <IconButton
+                                icon={isLiked ? "heart" : "heart-outline"}
+                                iconColor={isLiked ? theme.colors.error : "white"}
+                                size={20}
+                                style={{ margin: 0 }}
+                            />
+                        </TouchableOpacity>
                     </Animated.View>
                 </View>
                 <Card.Content style={styles.content}>
@@ -85,12 +163,18 @@ export function ListingCard({ title, price, imageUrl, onPress, style }: ListingC
                     <Text variant="bodyMedium" numberOfLines={2} style={styles.title}>
                         {title}
                     </Text>
+                    {game && (
+                        <Text variant="labelSmall" style={{ color: theme.colors.primary, marginBottom: 2 }}>
+                            {game}
+                        </Text>
+                    )}
                     <Text variant="titleMedium" style={{ color: theme.colors.primary, fontWeight: "bold" }}>
                         {formattedPrice}
                     </Text>
                     <View style={styles.sellerInfo}>
-                        <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>Jakarta</Text>
-                        <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}> • 5.0</Text>
+                        {server && <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginRight: 4 }}>{server}</Text>}
+                        {rating && <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>★ {rating}</Text>}
+                        {soldCount !== undefined && <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}> • {soldCount} Terjual</Text>}
                     </View>
                 </Card.Content>
             </Card>
@@ -116,8 +200,11 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     favoriteButton: {
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        margin: 0,
+        borderRadius: 20,
+        width: 32,
+        height: 32,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     content: {
         padding: 8,
@@ -130,6 +217,7 @@ const styles = StyleSheet.create({
     sellerInfo: {
         flexDirection: 'row',
         marginTop: 4,
-        alignItems: 'center'
+        alignItems: 'center',
+        flexWrap: 'wrap'
     }
 });
