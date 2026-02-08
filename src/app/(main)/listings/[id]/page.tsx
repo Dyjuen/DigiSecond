@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,9 @@ import { useState, useEffect } from "react";
 import { TransactionChat } from "@/components/chat/TransactionChat";
 import { Countdown } from "@/components/ui/countdown";
 import { toast } from "sonner";
-import { Heart, Loader2 } from "lucide-react";
+import { Heart, Loader2, Lock, Eye } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "motion/react";
 
 // Game Logos
 import mobileLegendsLogo from "@/assets/images/Mobile-legends-logo.svg.png";
@@ -40,10 +42,66 @@ export default function ListingDetailPage() {
     const [isBidding, setIsBidding] = useState(false);
     const [isFinishing, setIsFinishing] = useState(false);
     const [showFinishModal, setShowFinishModal] = useState(false);
+    const searchParams = useSearchParams();
+    const urlAccessCode = searchParams.get("accessCode");
+
+    // Initial state from URL if present
+    const [accessCode, setAccessCode] = useState(urlAccessCode || "");
+    const [inputAccessCode, setInputAccessCode] = useState(urlAccessCode || "");
 
     const listingId = params.id as string;
 
-    const { data: listing, isLoading, refetch } = api.listing.getById.useQuery({ id: listingId });
+    const { data: listing, isLoading, refetch } = api.listing.getById.useQuery({
+        id: listingId,
+        accessCode: accessCode
+    });
+
+    // Photos handling - MOVED HERE (Top Level)
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [isHovering, setIsHovering] = useState(false);
+
+    // Update selected image if listing changes or photos load
+    useEffect(() => {
+        if (listing) {
+            // Sanitize URLs to remove double slashes (except protocol)
+            const sanitizedPhotos = listing.photo_urls?.map(url => url.replace(/([^:]\/)\/+/g, "$1")) || [];
+            const hasPhotos = sanitizedPhotos.length > 0;
+            const gameLogo = gameLogoMap[listing.game] || null;
+
+            if (hasPhotos && !selectedImage) {
+                setSelectedImage(sanitizedPhotos[0]);
+            } else if (!hasPhotos && !selectedImage) {
+                setSelectedImage(gameLogo);
+            }
+        }
+    }, [listing, selectedImage]);
+
+    // Auto-fade carousel
+    useEffect(() => {
+        if (!listing?.photo_urls?.length || isHovering) return;
+
+        const sanitizedPhotos = listing.photo_urls.map(url => url.replace(/([^:]\/)\/+/g, "$1"));
+        if (sanitizedPhotos.length <= 1) return;
+
+        const interval = setInterval(() => {
+            setSelectedImage(current => {
+                const currentIndex = sanitizedPhotos.indexOf(current || "");
+                const nextIndex = (currentIndex + 1) % sanitizedPhotos.length;
+                return sanitizedPhotos[nextIndex];
+            });
+        }, 3000); // Change every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [listing, isHovering]);
+
+    // Effect to update if URL param changes (optional but good for robustness)
+    useEffect(() => {
+        if (urlAccessCode) {
+            setAccessCode(urlAccessCode);
+            setInputAccessCode(urlAccessCode);
+            refetch();
+        }
+    }, [urlAccessCode, refetch]);
 
     // Wishlist Logic
     const utils = api.useUtils();
@@ -101,12 +159,58 @@ export default function ListingDetailPage() {
         toggleWishlist.mutate({ listingId });
     };
 
+    const handleUnlock = (e: React.FormEvent) => {
+        e.preventDefault();
+        setAccessCode(inputAccessCode);
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-16 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-zinc-500">Memuat listing...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Handle Locked State
+    if ((listing as any).isLocked) {
+        return (
+            <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-16 flex items-center justify-center">
+                <div className="max-w-md w-full mx-4 bg-white dark:bg-zinc-900 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-center">
+                    <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Lock className="w-10 h-10 text-zinc-400" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Private Listing</h1>
+                    <p className="text-zinc-500 mb-8">
+                        Listing ini bersifat pribadi. Masukkan kode akses dari penjual untuk melihat detailnya.
+                    </p>
+
+                    <form onSubmit={handleUnlock} className="space-y-4">
+                        <input
+                            type="text"
+                            placeholder="Masukkan Kode Akses"
+                            value={inputAccessCode}
+                            onChange={(e) => setInputAccessCode(e.target.value)}
+                            className="w-full text-center text-2xl font-mono tracking-widest px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-brand-primary outline-none transition-all uppercase"
+                            maxLength={6}
+                        />
+                        <Button
+                            type="submit"
+                            className="w-full h-12 text-base font-bold bg-brand-primary hover:bg-brand-primary-dark text-white rounded-xl"
+                            disabled={!inputAccessCode}
+                        >
+                            Buka Listing
+                        </Button>
+                    </form>
+
+                    <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                        <Link href="/listings" className="text-sm text-zinc-500 hover:text-brand-primary font-medium">
+                            Kembali ke Marketplace
+                        </Link>
+                    </div>
                 </div>
             </div>
         );
@@ -171,13 +275,19 @@ export default function ListingDetailPage() {
     const gameLogo = gameLogoMap[listing.game];
     const isOwner = session?.user?.id === listing.seller.user_id;
 
-    console.log("ListingDetailPage listing:", listing);
+    const hasPhotos = listing.photo_urls && listing.photo_urls.length > 0;
 
+    // Reservation Logic
+    const isReserved = (listing as any).reserved_for_user_id && (!(listing as any).reserved_until || new Date((listing as any).reserved_until) > new Date());
+    const isReservedByMe = isReserved && (listing as any).reserved_for_user_id === session?.user?.id;
+    const isReservedByOther = isReserved && (listing as any).reserved_for_user_id !== session?.user?.id;
+
+    // ... code ...
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-16">
             <div className="max-w-6xl mx-auto px-6">
-                {/* Breadcrumb */}
+                {/* ... Breadcrumb ... */}
                 <nav className="flex items-center gap-2 text-sm text-zinc-500 mb-6">
                     <Link href="/listings" className="hover:text-brand-primary transition-colors">
                         Marketplace
@@ -189,6 +299,18 @@ export default function ListingDetailPage() {
                     <span>/</span>
                     <span className="text-zinc-700 dark:text-zinc-300 line-clamp-1">{listing.title}</span>
                 </nav>
+
+                {isReservedByOther && (
+                    <div className="mb-6 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl flex items-center gap-3">
+                        <Lock className="w-8 h-8 text-red-500" />
+                        <div>
+                            <p className="font-bold text-red-700 dark:text-red-400">Listing ini sedang direservasi</p>
+                            <p className="text-sm text-red-600 dark:text-red-500">
+                                Sedang dalam proses transaksi oleh pembeli lain. Silakan cek kembali nanti.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Left Column */}
@@ -208,40 +330,97 @@ export default function ListingDetailPage() {
                                 </div>
                             )}
 
-                            {/* Main Image - Game Logo */}
-                            <div className="h-64 md:h-80 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                                {gameLogo ? (
-                                    <div className="relative w-40 h-40">
-                                        <Image
-                                            src={gameLogo}
-                                            alt={listing.game}
-                                            fill
-                                            className="object-contain"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="w-32 h-32 rounded-3xl bg-brand-primary/10 flex items-center justify-center text-brand-primary text-5xl font-bold">
-                                        {listing.game.charAt(0)}
-                                    </div>
-                                )}
-                            </div>
-                            {/* Game Category Thumbnails */}
-                            <div className="p-4 flex gap-2 overflow-x-auto">
-                                <div className="w-16 h-16 rounded-xl bg-brand-primary/10 flex items-center justify-center shrink-0 border-2 border-brand-primary">
-                                    {gameLogo ? (
-                                        <div className="relative w-10 h-10">
+                            {/* Main Image Display */}
+                            <div
+                                className="h-64 md:h-[400px] bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center relative overflow-hidden group"
+                                onMouseEnter={() => setIsHovering(true)}
+                                onMouseLeave={() => setIsHovering(false)}
+                            >
+                                <AnimatePresence mode="wait">
+                                    {selectedImage ? (
+                                        <motion.div
+                                            key={selectedImage}
+                                            initial={{ opacity: 0, scale: 1.05 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.7, ease: "easeInOut" }}
+                                            className="absolute inset-0 w-full h-full"
+                                        >
                                             <Image
-                                                src={gameLogo}
-                                                alt={listing.game}
+                                                src={selectedImage}
+                                                alt={listing.title}
                                                 fill
-                                                className="object-contain"
+                                                className={cn(
+                                                    "object-contain",
+                                                    (!listing.photo_urls || listing.photo_urls.length === 0) && "p-8"
+                                                )}
                                             />
-                                        </div>
+                                        </motion.div>
                                     ) : (
-                                        <span className="text-brand-primary font-bold">{listing.game.charAt(0)}</span>
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            className="w-32 h-32 rounded-3xl bg-brand-primary/10 flex items-center justify-center text-brand-primary text-5xl font-bold"
+                                        >
+                                            {listing.game.charAt(0)}
+                                        </motion.div>
                                     )}
-                                </div>
+                                </AnimatePresence>
                             </div>
+
+                            {/* Thumbnails */}
+                            {listing.photo_urls && listing.photo_urls.length > 0 && (
+                                <div className="p-4 flex gap-3 overflow-x-auto scrollbar-hide border-t border-zinc-100 dark:border-zinc-800">
+                                    {listing.photo_urls.map((photo: string, index: number) => {
+                                        // Sanitize URL
+                                        const sanitizedPhoto = photo.replace(/([^:]\/)\/+/g, "$1");
+                                        return (
+                                            <button
+                                                key={index}
+                                                onClick={() => setSelectedImage(sanitizedPhoto)}
+                                                className={cn(
+                                                    "relative w-20 h-20 rounded-xl overflow-hidden shrink-0 transition-all border-2",
+                                                    selectedImage === sanitizedPhoto
+                                                        ? "border-brand-primary ring-2 ring-brand-primary/20 scale-95"
+                                                        : "border-transparent opacity-70 hover:opacity-100"
+                                                )}
+                                            >
+                                                <Image
+                                                    src={sanitizedPhoto}
+                                                    alt={`Preview ${index + 1}`}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                                {/* Progress/Active Indicator */}
+                                                {selectedImage === sanitizedPhoto && !isHovering && listing.photo_urls.length > 1 && (
+                                                    <div className="absolute bottom-0 left-0 h-1 bg-brand-primary animate-[progress_3s_linear_infinite]" style={{ width: '100%' }} />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Fallback to Game Logo thumbnail if no photos (Optional/Legacy behavior) */}
+                            {(!listing.photo_urls || listing.photo_urls.length === 0) && (
+                                <div className="p-4 flex gap-2 overflow-x-auto">
+                                    <div className="w-16 h-16 rounded-xl bg-brand-primary/10 flex items-center justify-center shrink-0 border-2 border-brand-primary/50">
+                                        {gameLogo ? (
+                                            <div className="relative w-10 h-10">
+                                                <Image
+                                                    src={gameLogo}
+                                                    alt={listing.game}
+                                                    fill
+                                                    className="object-contain"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <span className="text-brand-primary font-bold">{listing.game.charAt(0)}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Auction Status (If Auction) */}
@@ -326,7 +505,7 @@ export default function ListingDetailPage() {
                                 </h1>
                                 <div className="flex items-center justify-between w-full">
                                     <div className="flex items-center gap-2 text-sm text-zinc-500">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                        <Eye className="w-4 h-4" />
                                         <span>{listing.view_count.toLocaleString()} views</span>
                                     </div>
                                     <button
@@ -394,12 +573,12 @@ export default function ListingDetailPage() {
                                     <Button
                                         className="w-full h-12 text-base"
                                         onClick={handleBuy}
-                                        disabled={isOwner}
+                                        disabled={isOwner || isReservedByOther}
                                     >
                                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                                         </svg>
-                                        {isOwner ? "Listing Anda Sendiri" : "Beli Sekarang"}
+                                        {isOwner ? "Listing Anda Sendiri" : isReservedByOther ? "Sedang Direservasi" : "Beli Sekarang"}
                                     </Button>
                                 )}
 
@@ -435,6 +614,38 @@ export default function ListingDetailPage() {
                             </div>
 
                             {/* Seller & Protection Info */}
+                            {(listing as any).is_private && isOwner && (
+                                <div className="mt-4 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-sm font-bold text-indigo-700 dark:text-indigo-400">
+                                            Private Access Code
+                                        </p>
+                                        <span className="text-[10px] bg-indigo-200 dark:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-bold">
+                                            HANYA ANDA
+                                        </span>
+                                    </div>
+                                    <div
+                                        className="bg-white dark:bg-zinc-900 border border-indigo-200 dark:border-indigo-500/30 rounded-lg p-3 text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors group"
+                                        onClick={() => {
+                                            if ((listing as any).access_code) {
+                                                navigator.clipboard.writeText((listing as any).access_code);
+                                                toast.success("Kode akses disalin!");
+                                            }
+                                        }}
+                                    >
+                                        <p className="text-2xl font-mono font-black tracking-widest text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform">
+                                            {(listing as any).access_code}
+                                        </p>
+                                        <p className="text-[10px] text-zinc-400 mt-1">
+                                            Klik untuk menyalin
+                                        </p>
+                                    </div>
+                                    <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mt-2 leading-relaxed">
+                                        Listing ini tidak muncul di pencarian. <br />Bagikan link ini + kode akses ke pembeli.
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                                 <div className="flex items-start gap-2">
                                     <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

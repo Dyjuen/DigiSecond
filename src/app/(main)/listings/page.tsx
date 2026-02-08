@@ -4,7 +4,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { Search, SlidersHorizontal, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, Lock, ArrowRight, Search, SlidersHorizontal, ArrowUpRight, X } from "lucide-react";
 import { useState, useEffect, Suspense } from "react";
 import { api } from "@/trpc/react";
 import { logoMap } from "@/assets/images/logo-map";
@@ -14,6 +15,7 @@ import { SortDropdown, type SortOption } from "@/components/ui/SortDropdown";
 import { Pagination } from "@/components/ui/Pagination";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
 
 const sortOptions: SortOption[] = [
     { id: "newest", label: "Terbaru" },
@@ -33,10 +35,108 @@ const categories = [
     { name: "Nintendo", slug: "nintendo" },
 ];
 
+function AccessCodeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+    const router = useRouter();
+    const [code, setCode] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const checkCode = api.listing.getByAccessCode.useQuery(
+        { code },
+        { enabled: false, retry: false }
+    );
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!code) return;
+
+        setIsSubmitting(true);
+        try {
+            const result = await checkCode.refetch();
+            if (result.data) {
+                toast.success("Kode valid! Mengalihkan...");
+                router.push(`/listings/${result.data}?accessCode=${code}`);
+            } else {
+                toast.error("Kode akses tidak valid atau tidak ditemukan.");
+            }
+        } catch (err) {
+            toast.error("Terjadi kesalahan saat memverifikasi kode.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+                onClick={onClose}
+            ></div>
+
+            {/* Content */}
+            <div className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md border border-zinc-200 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+                {/* Close Button */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+
+                <div className="p-6">
+                    <div className="flex flex-col items-center gap-4 mb-6">
+                        <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center">
+                            <Lock className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <h2 className="text-xl font-bold text-center text-zinc-900 dark:text-white">
+                            Private Listing Access
+                        </h2>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <p className="text-center text-zinc-500 text-sm">
+                            Masukkan kode akses unik yang diberikan oleh penjual untuk membuka listing privat.
+                        </p>
+
+                        <input
+                            type="text"
+                            value={code}
+                            onChange={(e) => setCode(e.target.value.toUpperCase())}
+                            placeholder="MASUKKAN KODE"
+                            className="w-full text-center text-2xl font-mono font-bold tracking-[0.5em] py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none uppercase transition-all"
+                            maxLength={6}
+                        />
+
+                        <Button
+                            type="submit"
+                            disabled={!code || isSubmitting}
+                            className="w-full h-12 text-base font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl"
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                    Memverifikasi...
+                                </>
+                            ) : (
+                                "Buka Listing"
+                            )}
+                        </Button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function ListingsContent() {
     const { resolvedTheme } = useTheme();
     const searchParams = useSearchParams();
     const router = useRouter();
+
+    const [isAccessCodeModalOpen, setIsAccessCodeModalOpen] = useState(false);
 
     const categoryFilter = searchParams.get("category") || "";
     const typeFilter = searchParams.get("type") || "all";
@@ -103,27 +203,45 @@ function ListingsContent() {
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-12 relative overflow-hidden">
+            <AccessCodeModal
+                isOpen={isAccessCodeModalOpen}
+                onClose={() => setIsAccessCodeModalOpen(false)}
+            />
+
             <div className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-20 translate-y-[-20%]">
                 <Aurora colorStops={["#6366f1", "#a855f7", "#6366f1"]} amplitude={0.8} />
             </div>
 
             <div className="relative z-10 max-w-7xl mx-auto px-6">
-                <div className="mb-12">
-                    <motion.h1
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-5xl md:text-7xl font-black text-zinc-900 dark:text-white mb-4 tracking-tighter leading-[0.9]"
+                <div className="mb-12 flex flex-col md:flex-row justify-between items-end gap-6">
+                    <div>
+                        <motion.h1
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="text-5xl md:text-7xl font-black text-zinc-900 dark:text-white mb-4 tracking-tighter leading-[0.9]"
+                        >
+                            Marketplace <br /><span className="text-brand-primary">Layanan Game</span>
+                        </motion.h1>
+                        <motion.p
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="text-zinc-500 dark:text-zinc-400 max-w-2xl text-lg font-medium"
+                        >
+                            Temukan layanan joki, pemandu, dan akun game terbaik dengan keamanan Escrow.
+                        </motion.p>
+                    </div>
+
+                    <button
+                        onClick={() => setIsAccessCodeModalOpen(true)}
+                        className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-brand-primary dark:hover:border-brand-primary text-zinc-900 dark:text-white rounded-xl transition-all shadow-sm hover:shadow-md group"
                     >
-                        Marketplace <br /><span className="text-brand-primary">Layanan Game</span>
-                    </motion.h1>
-                    <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="text-zinc-500 dark:text-zinc-400 max-w-2xl text-lg font-medium"
-                    >
-                        Temukan layanan joki, pemandu, dan akun game terbaik dengan keamanan Escrow.
-                    </motion.p>
+                        <span className="w-8 h-8 rounded-full bg-brand-primary/10 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">🔑</span>
+                        <div className="text-left">
+                            <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Punya Kode?</span>
+                            <span className="font-bold text-sm">Masukan Kode Akses</span>
+                        </div>
+                    </button>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4 mb-8 sticky top-20 z-10 py-4 -mx-4 px-4 md:mx-0 md:px-0 bg-transparent">
@@ -288,6 +406,34 @@ function ListingsContent() {
 function ListingCard({ listing }: { listing: any }) {
     const isAuction = listing.listing_type === "AUCTION";
     const logo = logoMap[listing.game];
+    const [currentImage, setCurrentImage] = useState<string | null>(null);
+    const [isHovering, setIsHovering] = useState(false);
+
+    // Initialize with first photo or null
+    useEffect(() => {
+        if (listing.photo_urls && listing.photo_urls.length > 0) {
+            // Sanitize
+            const sanitized = listing.photo_urls[0].replace(/([^:]\/)\/+/g, "$1");
+            setCurrentImage(sanitized);
+        }
+    }, [listing]);
+
+    // Auto-fade carousel on hover
+    useEffect(() => {
+        if (!isHovering || !listing.photo_urls || listing.photo_urls.length <= 1) return;
+
+        const sanitizedPhotos = listing.photo_urls.map((url: string) => url.replace(/([^:]\/)\/+/g, "$1"));
+
+        const interval = setInterval(() => {
+            setCurrentImage(current => {
+                const currentIndex = sanitizedPhotos.indexOf(current || "");
+                const nextIndex = (currentIndex + 1) % sanitizedPhotos.length;
+                return sanitizedPhotos[nextIndex];
+            });
+        }, 1500); // Faster cycle for card preview
+
+        return () => clearInterval(interval);
+    }, [isHovering, listing]);
 
     return (
         <Link
@@ -296,25 +442,52 @@ function ListingCard({ listing }: { listing: any }) {
                 "group relative bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col h-full transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:border-brand-primary/30",
                 isAuction && "ring-1 ring-brand-primary/10"
             )}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => {
+                setIsHovering(false);
+                // Reset to first image on leave
+                if (listing.photo_urls && listing.photo_urls.length > 0) {
+                    setCurrentImage(listing.photo_urls[0].replace(/([^:]\/)\/+/g, "$1"));
+                }
+            }}
         >
             <div className={cn(
                 "relative h-44 flex items-center justify-center overflow-hidden",
                 isAuction ? "bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20" : "bg-zinc-100/30 dark:bg-zinc-800/30"
             )}>
-                {logo ? (
-                    <div className="relative w-24 h-24 transform group-hover:scale-125 transition-transform duration-700 ease-out z-10">
-                        <Image
-                            src={logo}
-                            alt={listing.game}
-                            fill
-                            className="object-contain drop-shadow-2xl"
-                        />
-                    </div>
-                ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-3xl font-bold text-brand-primary z-10">
-                        {listing.game.charAt(0)}
-                    </div>
-                )}
+                {/* Image Display */}
+                <AnimatePresence mode="wait">
+                    {currentImage ? (
+                        <motion.div
+                            key={currentImage}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                            className="absolute inset-0 w-full h-full p-4"
+                        >
+                            <Image
+                                src={currentImage}
+                                alt={listing.game}
+                                fill
+                                className="object-contain drop-shadow-lg"
+                            />
+                        </motion.div>
+                    ) : logo ? (
+                        <div className="relative w-24 h-24 transform group-hover:scale-125 transition-transform duration-700 ease-out z-10">
+                            <Image
+                                src={logo}
+                                alt={listing.game}
+                                fill
+                                className="object-contain drop-shadow-2xl"
+                            />
+                        </div>
+                    ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-3xl font-bold text-brand-primary z-10">
+                            {listing.game.charAt(0)}
+                        </div>
+                    )}
+                </AnimatePresence>
 
                 <div className="absolute inset-0 opacity-10 pointer-events-none transition-transform duration-1000 group-hover:scale-150">
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-brand-primary/30 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -325,6 +498,15 @@ function ListingCard({ listing }: { listing: any }) {
                         <div className="bg-brand-primary text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg shadow-brand-primary/30">
                             <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                             LELANG
+                        </div>
+                    </div>
+                )}
+
+                {listing.reserved_for_user_id && (!listing.reserved_until || new Date(listing.reserved_until) > new Date()) && (
+                    <div className="absolute top-3 left-3 z-20">
+                        <div className="bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg shadow-amber-500/30">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                            DIRESERVASI ANDA
                         </div>
                     </div>
                 )}

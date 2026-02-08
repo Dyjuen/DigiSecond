@@ -56,21 +56,18 @@ function UserProfileDropdown() {
         .toUpperCase()
         .slice(0, 2) || "U";
 
-    // Role badge color
-    const roleBadgeClass = {
-        ADMIN: "bg-red-500/10 text-red-500 border-red-500/20",
-        SELLER: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-        BUYER: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    }[user?.role || "BUYER"];
+    // Role badge color based on Tier (except Admin)
+    const isPro = user?.tier === "PRO" || user?.tier === "ENTERPRISE";
+    const isAdmin = user?.role === "ADMIN";
 
-    // Role display label
-    const tierLabel = user?.tier === "PRO" ? "Pro Plan" : user?.tier === "ENTERPRISE" ? "Enterprise" : "Free Tier";
+    const roleBadgeClass = isAdmin
+        ? "bg-red-500/10 text-red-500 border-red-500/20"
+        : isPro
+            ? "bg-brand-primary/10 text-brand-primary border-brand-primary/20"
+            : "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700";
 
-    const roleLabels: Record<string, string> = {
-        ADMIN: "Admin",
-        SELLER: "Seller",
-        BUYER: tierLabel,
-    };
+    // Display label
+    const displayLabel = isAdmin ? "Admin" : (user?.tier === "PRO" ? "Pro Plan" : user?.tier === "ENTERPRISE" ? "Enterprise" : "Free Tier");
 
     return (
         <div ref={dropdownRef} className="relative">
@@ -127,7 +124,7 @@ function UserProfileDropdown() {
                         </div>
                         <div className="mt-3">
                             <span className={cn("text-xs px-2 py-0.5 rounded-full border font-medium", roleBadgeClass)}>
-                                {roleLabels[user?.role || "BUYER"] || user?.role}
+                                {displayLabel}
                             </span>
                         </div>
                     </div>
@@ -212,20 +209,18 @@ function MobileProfileSection() {
         .toUpperCase()
         .slice(0, 2) || "U";
 
-    const roleBadgeClass = {
-        ADMIN: "bg-red-500/10 text-red-500 border-red-500/20",
-        SELLER: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-        BUYER: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    }[user?.role || "BUYER"];
+    // Role badge color based on Tier (except Admin)
+    const isPro = user?.tier === "PRO" || user?.tier === "ENTERPRISE";
+    const isAdmin = user?.role === "ADMIN";
 
-    // Role display label
-    const tierLabel = user?.tier === "PRO" ? "Pro Plan" : user?.tier === "ENTERPRISE" ? "Enterprise" : "Free Tier";
+    const roleBadgeClass = isAdmin
+        ? "bg-red-500/10 text-red-500 border-red-500/20"
+        : isPro
+            ? "bg-brand-primary/10 text-brand-primary border-brand-primary/20"
+            : "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700";
 
-    const roleLabels: Record<string, string> = {
-        ADMIN: "Admin",
-        SELLER: "Seller",
-        BUYER: tierLabel,
-    };
+    // Display label
+    const displayLabel = isAdmin ? "Admin" : (user?.tier === "PRO" ? "Pro Plan" : user?.tier === "ENTERPRISE" ? "Enterprise" : "Free Tier");
 
     return (
         <div className="space-y-3">
@@ -238,7 +233,7 @@ function MobileProfileSection() {
                     <p className="font-semibold text-zinc-900 dark:text-white truncate">{user?.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                         <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full border font-medium", roleBadgeClass)}>
-                            {roleLabels[user?.role || "BUYER"] || user?.role}
+                            {displayLabel}
                         </span>
                     </div>
                 </div>
