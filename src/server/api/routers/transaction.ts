@@ -104,6 +104,8 @@ export const transactionRouter = createTRPCRouter({
                     current_bid: true,
                     status: true,
                     listing_type: true,
+                    reserved_for_user_id: true,
+                    reserved_until: true,
                 },
             });
 
@@ -151,6 +153,17 @@ export const transactionRouter = createTRPCRouter({
                 });
             }
 
+            // Check if listing is reserved by another user (for FIXED type only)
+            if (listing.listing_type === "FIXED" && listing.reserved_for_user_id && listing.reserved_for_user_id !== userId) {
+                if (listing.reserved_until && listing.reserved_until > new Date()) {
+                    throw new TRPCError({
+                        code: "CONFLICT",
+                        message: "Item ini sedang direservasi oleh pembeli lain. Silakan coba lagi nanti.",
+                    });
+                }
+                // Reservation expired, will be cleared in transaction below
+            }
+
             // Check for existing pending transaction on this listing
             const existingTx = await db.transaction.findFirst({
                 where: {
@@ -176,10 +189,19 @@ export const transactionRouter = createTRPCRouter({
 
             // Create transaction with payment record in a transaction
             const transaction = await db.$transaction(async (tx) => {
-                // Update listing status to PENDING
+                // Update listing status to PENDING and set reservation (for FIXED type)
+                const updateData: { status: ListingStatus; reserved_for_user_id?: string; reserved_until?: Date } = {
+                    status: ListingStatus.PENDING,
+                };
+
+                if (listing.listing_type === "FIXED") {
+                    updateData.reserved_for_user_id = userId;
+                    updateData.reserved_until = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+                }
+
                 await tx.listing.update({
                     where: { listing_id: input.listing_id },
-                    data: { status: ListingStatus.PENDING },
+                    data: updateData,
                 });
 
                 // Create transaction
@@ -657,9 +679,14 @@ export const transactionRouter = createTRPCRouter({
                     data: { status: PaymentStatus.EXPIRED },
                 });
 
+                // Restore listing to ACTIVE and clear reservation
                 await tx.listing.update({
                     where: { listing_id: transaction.listing.listing_id },
-                    data: { status: ListingStatus.ACTIVE },
+                    data: {
+                        status: ListingStatus.ACTIVE,
+                        reserved_for_user_id: null,
+                        reserved_until: null,
+                    },
                 });
             });
 

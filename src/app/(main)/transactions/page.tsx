@@ -8,12 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
 import { TransactionChat } from "@/components/chat/TransactionChat";
+import { Gamepad2, PackageOpen } from "lucide-react";
 
 // Status badge colors
 const statusColors: Record<string, string> = {
-    PENDING: "bg-amber-500",
+    PENDING_PAYMENT: "bg-amber-500",
     PAID: "bg-blue-500",
-    TRANSFERRED: "bg-purple-500",
+    ITEM_TRANSFERRED: "bg-purple-500",
+    ITEM_SENT: "bg-purple-500", // Handle alias if any
+    VERIFIED: "bg-emerald-500",
     COMPLETED: "bg-emerald-500",
     CANCELLED: "bg-zinc-500",
     DISPUTED: "bg-red-500",
@@ -21,9 +24,11 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-    PENDING: "Menunggu Pembayaran",
+    PENDING_PAYMENT: "Menunggu Pembayaran",
     PAID: "Dibayar - Escrow",
-    TRANSFERRED: "Item Dikirim",
+    ITEM_TRANSFERRED: "Item Dikirim",
+    ITEM_SENT: "Item Dikirim", // Handle alias if any
+    VERIFIED: "Diverifikasi",
     COMPLETED: "Selesai",
     CANCELLED: "Dibatalkan",
     DISPUTED: "Dispute",
@@ -132,7 +137,7 @@ export default function TransactionsPage() {
                     </div>
                 ) : transactions.length === 0 ? (
                     <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                        <span className="text-4xl block mb-4">📦</span>
+                        <PackageOpen className="w-16 h-16 text-zinc-300 mx-auto mb-4" />
                         <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
                             Belum ada transaksi
                         </h3>
@@ -159,7 +164,7 @@ export default function TransactionsPage() {
                                     {/* Left: Listing Info */}
                                     <div className="flex items-start gap-4 flex-1">
                                         <div className="w-16 h-16 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                                            <span className="text-2xl">🎮</span>
+                                            <Gamepad2 className="w-8 h-8 text-zinc-400" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-semibold text-zinc-900 dark:text-white line-clamp-1">

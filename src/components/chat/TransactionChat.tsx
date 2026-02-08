@@ -7,6 +7,22 @@ import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { api } from "@/trpc/react";
+import {
+    Star,
+    ShoppingCart,
+    Receipt,
+    Package,
+    Check,
+    AlertTriangle,
+    Info,
+    CreditCard,
+    Send,
+    X,
+    ShieldAlert,
+    CheckCircle,
+    Zap,
+    MessageSquare
+} from "lucide-react";
 
 export type TransactionStatus =
     | "INQUIRY"
@@ -77,7 +93,7 @@ function ReviewSection({ transactionId, sellerName }: { transactionId: string; s
 
     const createReview = api.review.create.useMutation({
         onSuccess: () => {
-            toast.success("Review berhasil dikirim! ⭐");
+            toast.success("Review berhasil dikirim!");
             setHasReviewed(true);
             utils.review.getByTransaction.invalidate();
         },
@@ -89,7 +105,7 @@ function ReviewSection({ transactionId, sellerName }: { transactionId: string; s
     if (hasReviewed || existingReview?.hasReviewed) {
         return (
             <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-center">
-                <span className="text-2xl block mb-2">⭐</span>
+                <Star className="w-8 h-8 text-amber-500 mx-auto mb-2" fill="currentColor" />
                 <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
                     Terima kasih atas review Anda!
                 </p>
@@ -126,14 +142,9 @@ function ReviewSection({ transactionId, sellerName }: { transactionId: string; s
                         onMouseLeave={() => setHoveredRating(null)}
                         className="p-0.5 transition-transform hover:scale-110"
                     >
-                        <svg
+                        <Star
                             className={`w-7 h-7 ${star <= displayRating ? "text-amber-400 fill-amber-400" : "text-zinc-300 dark:text-zinc-600"}`}
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                        </svg>
+                        />
                     </button>
                 ))}
             </div>
@@ -151,7 +162,7 @@ function ReviewSection({ transactionId, sellerName }: { transactionId: string; s
                 onClick={handleSubmit}
                 disabled={createReview.isPending}
             >
-                {createReview.isPending ? "Mengirim..." : "Kirim Review ⭐"}
+                {createReview.isPending ? "Mengirim..." : "Kirim Review"}
             </Button>
         </div>
     );
@@ -215,7 +226,11 @@ export function TransactionChat(props: TransactionChatProps) {
             createPayment.mutate({ transaction_id: data.transaction_id });
         },
         onError: (error) => {
-            toast.error(error.message);
+            if (error.message.toLowerCase().includes("reservasi")) {
+                toast.error(error.message, { duration: 5000 });
+            } else {
+                toast.error(error.message);
+            }
             setIsProcessing(false);
         },
     });
@@ -224,7 +239,7 @@ export function TransactionChat(props: TransactionChatProps) {
         onSuccess: (data) => {
             setPaymentId(data.payment_id);
             setInvoiceUrl(data.invoice_url);
-            addSystemMessage(`Invoice dibuat: Rp ${listing.price.toLocaleString("id-ID")}. Silakan bayar.`);
+            addSystemMessage(`Invoice dibuat: Rp ${data.amount.toLocaleString("id-ID")}. Silakan bayar.`);
             setIsProcessing(false);
         },
         onError: (error) => {
@@ -237,7 +252,7 @@ export function TransactionChat(props: TransactionChatProps) {
         onSuccess: () => {
             toast.success("Pembayaran berhasil (simulasi)");
             setTransactionStatus("PAID");
-            addSystemMessage("💰 Pembayaran diterima! Dana masuk ke escrow.");
+            addSystemMessage("Pembayaran diterima! Dana masuk ke escrow.");
             refetchTransaction();
         },
         onError: (error) => toast.error(error.message),
@@ -247,7 +262,7 @@ export function TransactionChat(props: TransactionChatProps) {
         onSuccess: () => {
             toast.success("Item ditandai sudah dikirim");
             setTransactionStatus("ITEM_SENT");
-            addSystemMessage("📦 Seller telah mengirim item. Buyer harap verifikasi.");
+            addSystemMessage("Seller telah mengirim item. Buyer harap verifikasi.");
             refetchTransaction();
         },
         onError: (error) => toast.error(error.message),
@@ -257,7 +272,7 @@ export function TransactionChat(props: TransactionChatProps) {
         onSuccess: () => {
             toast.success("Transaksi selesai!");
             setTransactionStatus("COMPLETED");
-            addSystemMessage("✅ Transaksi selesai! Dana dilepas ke seller.");
+            addSystemMessage("Transaksi selesai! Dana dilepas ke seller.");
             refetchTransaction();
         },
         onError: (error) => toast.error(error.message),
@@ -268,7 +283,7 @@ export function TransactionChat(props: TransactionChatProps) {
             toast.success("Dispute dibuat, admin akan meninjau");
             setTransactionStatus("DISPUTED");
             setShowDisputeForm(false);
-            addSystemMessage("⚠️ Dispute dibuat. Menunggu review admin.");
+            addSystemMessage("Dispute dibuat. Menunggu review admin.");
             refetchTransaction();
         },
         onError: (error) => toast.error(error.message),
@@ -342,7 +357,7 @@ export function TransactionChat(props: TransactionChatProps) {
             return;
         }
         setIsProcessing(true);
-        addSystemMessage("🛒 Memproses pembelian...");
+        addSystemMessage("Memproses pembelian...");
         createTransaction.mutate({
             listing_id: listing.id,
             payment_method: "VA",
@@ -462,9 +477,7 @@ export function TransactionChat(props: TransactionChatProps) {
                                     </div>
                                 </div>
                                 <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
-                                    <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
+                                    <X className="w-5 h-5 text-zinc-500" />
                                 </button>
                             </div>
 
@@ -486,7 +499,9 @@ export function TransactionChat(props: TransactionChatProps) {
                                     </span>
                                     <div>
                                         <p className="text-sm font-medium text-zinc-900 dark:text-white line-clamp-1">{listing.title}</p>
-                                        <p className="text-xs text-brand-primary font-semibold">Rp {listing.price.toLocaleString("id-ID")}</p>
+                                        <p className="text-xs text-brand-primary font-semibold">
+                                            Rp {(transactionData?.transaction_amount ?? listing.price).toLocaleString("id-ID")}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -539,7 +554,7 @@ export function TransactionChat(props: TransactionChatProps) {
                                             {/* Info box */}
                                             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
                                                 <p className="text-xs text-blue-600 dark:text-blue-400">
-                                                    💡 <strong>Test Mode:</strong> Anda akan diarahkan ke dashboard Xendit. Pilih metode pembayaran (BCA, QRIS, dll) dan klik tombol simulasi pembayaran di sana.
+                                                    <Info className="w-4 h-4 inline mr-1" /> <strong>Test Mode:</strong> Anda akan diarahkan ke dashboard Xendit. Pilih metode pembayaran (BCA, QRIS, dll) dan klik tombol simulasi pembayaran di sana.
                                                 </p>
                                             </div>
 
@@ -548,7 +563,7 @@ export function TransactionChat(props: TransactionChatProps) {
                                                 className="w-full bg-brand-primary hover:bg-brand-primary/90"
                                                 onClick={() => window.open(invoiceUrl, '_blank')}
                                             >
-                                                🚀 Bayar Sekarang di Xendit
+                                                <CreditCard className="w-4 h-4 mr-2" /> Bayar Sekarang di Xendit
                                             </Button>
 
                                             {/* Secondary: Quick simulation for dev */}
@@ -558,7 +573,7 @@ export function TransactionChat(props: TransactionChatProps) {
                                                 onClick={handleSimulatePayment}
                                                 disabled={simulatePayment.isPending}
                                             >
-                                                {simulatePayment.isPending ? "Memproses..." : "⚡ Simulasi Cepat (Dev)"}
+                                                {simulatePayment.isPending ? "Memproses..." : <><Zap className="w-4 h-4 mr-2" /> Simulasi Cepat (Dev)</>}
                                             </Button>
                                         </>
                                     ) : (
@@ -589,9 +604,10 @@ export function TransactionChat(props: TransactionChatProps) {
                             transactionStatus === "PAID" && isBuyer && (
                                 <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-2">
                                     <p className="text-sm text-zinc-500">Menunggu penjual mengirim detail item...</p>
-                                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex gap-2">
+                                        <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                                         <p className="text-xs text-blue-600 dark:text-blue-400">
-                                            💡 <strong>Info Simulasi:</strong> Silakan login sebagai akun <strong>Penjual</strong> di browser/tab lain untuk memproses pesanan ini (Klik &quot;Tandai Sudah Dikirim&quot;).
+                                            <strong>Info Simulasi:</strong> Silakan login sebagai akun <strong>Penjual</strong> di browser/tab lain untuk memproses pesanan ini (Klik &quot;Tandai Sudah Dikirim&quot;).
                                         </p>
                                     </div>
                                 </div>
@@ -650,7 +666,7 @@ export function TransactionChat(props: TransactionChatProps) {
                             transactionStatus === "COMPLETED" && (
                                 <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
                                     <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-center">
-                                        <span className="text-3xl mb-2 block">🎉</span>
+                                        <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
                                         <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Transaksi Selesai!</p>
                                         <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-1">Dana telah dilepas ke seller</p>
                                     </div>
@@ -675,9 +691,7 @@ export function TransactionChat(props: TransactionChatProps) {
                                             className="flex-1 px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-primary text-sm"
                                         />
                                         <Button size="icon" onClick={handleSendMessage} className="shrink-0" disabled={sendMessage.isPending}>
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                            </svg>
+                                            <Send className="w-5 h-5" />
                                         </Button>
                                     </div>
                                 </div>
