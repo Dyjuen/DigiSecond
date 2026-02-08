@@ -194,7 +194,13 @@ export default function ListingDetailScreen() {
                                     {listing.seller.is_verified ? "Verified Seller" : "Seller"}
                                 </Text>
                             </View>
-                            <Button mode="text" style={{ marginLeft: "auto" }}>View</Button>
+                            <Button
+                                mode="text"
+                                style={{ marginLeft: "auto" }}
+                                onPress={() => router.push({ pathname: "/seller/[id]", params: { id: listing.seller_id } })}
+                            >
+                                View
+                            </Button>
                         </Card.Content>
                     </Card>
 
