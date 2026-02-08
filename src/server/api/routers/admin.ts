@@ -118,21 +118,52 @@ export const adminRouter = createTRPCRouter({
         });
     }),
 
-    getUsers: adminProcedure.query(async ({ ctx }) => {
-        return ctx.db.user.findMany({
-            orderBy: { created_at: "desc" },
-            select: {
-                user_id: true,
-                name: true,
-                email: true,
-                role: true,
-                is_verified: true,
-                is_suspended: true,
-                created_at: true,
-                avatar_url: true,
+    getUsers: adminProcedure
+        .input(z.object({
+            limit: z.number().min(1).max(100).default(10),
+            page: z.number().min(1).default(1),
+            search: z.string().optional(),
+        }))
+        .query(async ({ ctx, input }) => {
+            const { limit, page, search } = input;
+            const skip = (page - 1) * limit;
+
+            const where: any = {};
+
+            if (search) {
+                where.OR = [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { email: { contains: search, mode: "insensitive" } },
+                ];
             }
-        });
-    }),
+
+            const [users, totalCount] = await Promise.all([
+                ctx.db.user.findMany({
+                    take: limit,
+                    skip: skip,
+                    where,
+                    orderBy: { created_at: "desc" },
+                    select: {
+                        user_id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                        tier: true,
+                        is_verified: true,
+                        is_suspended: true,
+                        created_at: true,
+                        avatar_url: true,
+                    }
+                }),
+                ctx.db.user.count({ where })
+            ]);
+
+            return {
+                users,
+                totalCount,
+                totalPages: Math.ceil(totalCount / limit)
+            };
+        }),
 
     getDisputes: adminProcedure.query(async ({ ctx }) => {
         return ctx.db.dispute.findMany({
@@ -504,6 +535,7 @@ export const adminRouter = createTRPCRouter({
                     name: true,
                     email: true,
                     role: true,
+                    tier: true,
                     is_verified: true,
                     is_suspended: true,
                     created_at: true,

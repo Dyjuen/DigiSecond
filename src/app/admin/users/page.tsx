@@ -1,14 +1,39 @@
 "use client";
 
 import { api } from "@/trpc/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/Pagination";
+import { SortDropdown as PageSizeDropdown } from "@/components/ui/SortDropdown";
+import { Search } from "lucide-react";
 
 export default function UsersPage() {
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-    const { data: users, isLoading } = api.admin.getUsers.useQuery();
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState("10");
+    const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search);
+            setPage(1); // Reset to page 1 on search
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    const { data, isLoading } = api.admin.getUsers.useQuery({
+        page,
+        limit: parseInt(limit),
+        search: debouncedSearch
+    });
+
+    const users = data?.users || [];
+    const totalPages = data?.totalPages || 1;
+    const totalCount = data?.totalCount || 0;
 
     // Fetch details for selected user
     const { data: userDetails, isLoading: isLoadingDetails } = api.admin.getUserDetails.useQuery(
@@ -214,11 +239,24 @@ export default function UsersPage() {
                         Manage platform users and permissions
                     </p>
                 </div>
+
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                        <input
+                            type="text"
+                            placeholder="Search users..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-9 pr-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 w-64"
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* Users Table */}
-            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                <div className="overflow-x-auto">
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 flex flex-col min-h-[600px]">
+                <div className="overflow-x-auto flex-1 rounded-t-xl overflow-hidden">
                     <table className="w-full">
                         <thead className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
                             <tr>
@@ -304,6 +342,40 @@ export default function UsersPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <div className="flex items-center gap-4 text-sm text-zinc-500">
+                        <span>
+                            Showing {users.length > 0 ? (page - 1) * parseInt(limit) + 1 : 0} - {Math.min(page * parseInt(limit), totalCount)} of {totalCount} users
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                            <span>Rows per page:</span>
+                            <div className="w-32">
+                                <PageSizeDropdown
+                                    options={[
+                                        { id: "10", label: "10 rows" },
+                                        { id: "25", label: "25 rows" },
+                                        { id: "50", label: "50 rows" },
+                                        { id: "100", label: "100 rows" },
+                                    ]}
+                                    value={limit}
+                                    onChange={(val) => {
+                                        setLimit(val);
+                                        setPage(1);
+                                    }}
+                                    className="h-9 min-w-0 w-full"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <Pagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                    />
                 </div>
             </div>
 

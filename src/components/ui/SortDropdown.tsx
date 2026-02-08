@@ -15,9 +15,10 @@ interface SortDropdownProps {
     value: string;
     onChange: (value: string) => void;
     className?: string;
+    direction?: "up" | "down";
 }
 
-export function SortDropdown({ options, value, onChange, className }: SortDropdownProps) {
+export function SortDropdown({ options, value, onChange, className, direction = "down" }: SortDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +43,7 @@ export function SortDropdown({ options, value, onChange, className }: SortDropdo
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "h-12 px-5 flex items-center gap-3 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-xl",
+                    "h-12 px-5 flex items-center gap-3 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-xl w-full",
                     "text-zinc-900 dark:text-white font-bold text-sm transition-all duration-300",
                     "hover:border-brand-primary hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]",
                     isOpen && "border-brand-primary ring-4 ring-brand-primary/10 shadow-[0_0_25px_rgba(99,102,241,0.2)]"
@@ -51,10 +52,10 @@ export function SortDropdown({ options, value, onChange, className }: SortDropdo
                 <div className="p-1.5 rounded-lg bg-brand-primary/10 text-brand-primary">
                     <ArrowUpDown className="w-3.5 h-3.5" />
                 </div>
-                <span className="flex-1 text-left min-w-[120px] whitespace-nowrap">{selectedOption?.label}</span>
+                <span className="flex-1 text-left min-w-[30px] whitespace-nowrap overflow-hidden text-ellipsis">{selectedOption?.label}</span>
                 <ChevronDown
                     className={cn(
-                        "w-4 h-4 text-zinc-400 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)",
+                        "w-4 h-4 text-zinc-400 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) shrink-0",
                         isOpen && "rotate-180 text-brand-primary"
                     )}
                 />
@@ -63,16 +64,20 @@ export function SortDropdown({ options, value, onChange, className }: SortDropdo
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: 15, scale: 0.9, filter: "blur(10px)" }}
-                        animate={{ opacity: 1, y: 6, scale: 1, filter: "blur(0px)" }}
-                        exit={{ opacity: 0, y: 15, scale: 0.9, filter: "blur(10px)" }}
+                        initial={{ opacity: 0, y: direction === "up" ? 10 : -10, scale: 0.9, filter: "blur(10px)" }}
+                        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: direction === "up" ? 10 : -10, scale: 0.9, filter: "blur(10px)" }}
                         transition={{
                             type: "spring",
                             damping: 25,
                             stiffness: 400,
                             mass: 0.8
                         }}
-                        className="absolute top-full left-0 md:right-0 mt-2 min-w-[200px] bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden py-2"
+                        className={cn(
+                            "absolute left-0 md:right-0 min-w-[200px] bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden py-2",
+                            direction === "up" ? "bottom-full mb-2" : "top-full mt-2"
+                        )}
+                        style={{ width: "100%" }}
                     >
                         <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-800 mb-1">
                             Urutkan Berdasarkan
