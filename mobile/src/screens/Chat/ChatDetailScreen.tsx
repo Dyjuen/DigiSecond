@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     FlatList,
@@ -7,13 +7,14 @@ import {
     Platform,
     Image,
     Alert,
-    ActivityIndicator
+    ActivityIndicator,
+    TextInput as NativeTextInput
 } from "react-native";
-import { Text, TextInput, IconButton, useTheme, Menu } from "react-native-paper";
-import { useLocalSearchParams, Stack } from "expo-router";
+import { Text, IconButton, useTheme, Menu, Button } from "react-native-paper";
+import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import TransactionChatHeader, { TransactionStatus } from "../../components/TransactionChatHeader";
+import { TransactionProgressBar, TransactionStatus } from "../../components/TransactionProgressBar";
 import VerificationBanner from "../../components/VerificationBanner";
 import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
@@ -28,14 +29,31 @@ interface Message {
     timestamp: string;
 }
 
-export default function ChatDetailScreen() {
+export default function ChatDetailScreenV2() {
     const theme = useTheme();
     const { id, username, mockStatus } = useLocalSearchParams<{ id: string; username: string; mockStatus?: string }>();
     const userId = useAuthStore((state) => state.user?.id);
     const [inputText, setInputText] = useState("");
     const [menuVisible, setMenuVisible] = useState(false);
     const insets = useSafeAreaInsets();
+    const router = useRouter();
     const utils = api.useUtils();
+
+    // Fetch full transaction details
+    const { data: transaction, isLoading: isTransactionLoading, refetch: refetchTransaction } = api.transaction.getById.useQuery(
+        { transaction_id: id },
+        {
+            enabled: !!id,
+            refetchInterval: (data) => {
+                if (!data) return 5000;
+                return ["COMPLETED", "CANCELLED", "REFUNDED"].includes(data.status) ? false : 3000;
+            }
+        }
+    );
+
+    // Determines if we should show legitimate status or fallback to mock
+    const currentStatus = transaction?.status || (mockStatus as TransactionStatus);
+    const isBuyer = userId === transaction?.buyer_id;
 
     // Queries
     const {
@@ -43,12 +61,12 @@ export default function ChatDetailScreen() {
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage,
-        isLoading
+        isLoading: isMessagesLoading
     } = api.message.getByTransaction.useInfiniteQuery(
-        { transaction_id: id, limit: 20 },
+        { transaction_id: id, limit: 20, sortOrder: 'older' },
         {
             getNextPageParam: (lastPage) => lastPage.nextCursor,
-            // Inverted list: newest messages are first in the list
+            refetchInterval: 3000, // Poll every 3 seconds
         }
     );
 
@@ -57,14 +75,13 @@ export default function ChatDetailScreen() {
         text: msg.message_content,
         image: msg.attachment_url || undefined,
         sentByMe: msg.sender_user_id === userId,
-        timestamp: formatDate(msg.created_at) // Using shared utility
+        timestamp: formatDate(msg.created_at)
     })) ?? [];
 
     // Mutations
     const sendMessageMutation = api.message.send.useMutation({
         onSuccess: () => {
             utils.message.getByTransaction.invalidate({ transaction_id: id });
-            // Also invalidate unread counts
             utils.message.getAllUnreadCounts.invalidate();
         },
         onError: (error) => {
@@ -78,35 +95,8 @@ export default function ChatDetailScreen() {
         }
     });
 
-    // Realtime Subscription
-    useEffect(() => {
-        if (!id) return;
-
-        const channel = supabase
-            .channel(`transaction:${id}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'Message',
-                    filter: `transaction_id=eq.${id}`,
-                },
-                (payload) => {
-                    // Invalidate to fetch new message
-                    utils.message.getByTransaction.invalidate({ transaction_id: id });
-
-                    // If we are looking at the screen, mark as read
-                    // Simple timeout to allow fetch to complete or just fire-and-forget
-                    markReadMutation.mutate({ transaction_id: id });
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [id]);
+    // Removed Supabase Realtime subscription to match Web implementation
+    // and avoid Auth/JWT connection issues.
 
     // Mark read on mount
     useEffect(() => {
@@ -131,13 +121,10 @@ export default function ChatDetailScreen() {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             quality: 0.8,
-            base64: true, // If we were uploading directly, but here we likely need to upload to Supabase first not implemented in this scope
+            base64: true,
         });
 
         if (!result.canceled && result.assets[0]) {
-            // TODO: Implement image upload to Supabase storage, then send message with URL
-            // For now, we can only send text as per backend mutation signature (it accepts attachment_url)
-            // This would require a separate uploadPhoto procedure or client-side upload
             Alert.alert("Not Implemented", "Image upload requires setting up storage client side.");
         }
     };
@@ -152,6 +139,25 @@ export default function ChatDetailScreen() {
         const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
         if (!result.canceled && result.assets[0]) {
             Alert.alert("Not Implemented", "Image upload requires setting up storage client side.");
+        }
+    };
+
+    const handleDispute = () => {
+        // Use Type Assertion to bypass strict route typing if needed, 
+        // though strictly speaking we should define the routes in a d.ts file.
+        // For now, assuming standard Expo Router string paths work.
+        router.push({
+            pathname: "/dispute/create",
+            params: { transactionId: id }
+        } as any);
+    };
+
+    const handleViewDispute = () => {
+        if (transaction?.dispute?.dispute_id) {
+            router.push({
+                pathname: "/dispute/[disputeId]",
+                params: { disputeId: transaction.dispute.dispute_id }
+            } as any);
         }
     };
 
@@ -213,30 +219,86 @@ export default function ChatDetailScreen() {
         >
             <Stack.Screen
                 options={{
-                    headerShown: !mockStatus, // Show default header if no status (unlikely)
-                    title: username,
+                    headerShown: false, // Always hide default header since we implement a custom one
                 }}
             />
 
-            {mockStatus && (
-                <View>
-                    <TransactionChatHeader
-                        partnerName={username}
-                        listingTitle="Item Transaction" // ideally fetching transaction details to get this
-                        listingPrice={0} // ideally fetching transaction details
-                        status={mockStatus as TransactionStatus}
-                    />
-                    {/* Verification banner logic would go here if we fetched full transaction details */}
+            {/* Custom Header */}
+            <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 4,
+                paddingVertical: 8,
+                backgroundColor: theme.colors.surface,
+                borderBottomWidth: 1,
+                borderBottomColor: theme.colors.outlineVariant,
+                paddingTop: insets.top,
+            }}>
+                <IconButton icon="arrow-left" onPress={() => router.back()} />
+                <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.primaryContainer, borderRadius: 20 }}>
+                    <Text style={{ color: theme.colors.onPrimaryContainer, fontWeight: 'bold' }}>{username?.charAt(0).toUpperCase() || "?"}</Text>
                 </View>
-            )}
+                <Text variant="titleMedium" style={{ marginLeft: 12, flex: 1, fontWeight: 'bold' }}>{username}</Text>
+                <IconButton icon="dots-vertical" onPress={() => setMenuVisible(true)} />
+            </View>
 
-            {isLoading ? (
+            {/* Header & Progress Bar Area */}
+            <View>
+                {transaction && (
+                    <View style={{ backgroundColor: theme.colors.surface }}>
+                        {/* Item Info Summary */}
+                        <View style={[styles.itemSummary, { borderBottomColor: theme.colors.outlineVariant, borderBottomWidth: 1 }]}>
+                            <Text variant="titleSmall">{transaction.listing.title}</Text>
+                            <Text variant="bodyMedium" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
+                                IDR {transaction.transaction_amount.toLocaleString()}
+                            </Text>
+                        </View>
+
+                        {/* Progress Bar */}
+                        <TransactionProgressBar
+                            status={currentStatus as TransactionStatus}
+                            verificationDeadline={transaction.verification_deadline?.toString()}
+                        />
+                    </View>
+                )}
+
+                {/* Dispute / Action Buttons */}
+                {transaction && currentStatus === 'ITEM_TRANSFERRED' && isBuyer && !transaction.dispute && (
+                    <View style={styles.actionContainer}>
+                        <Button
+                            mode="outlined"
+                            textColor={theme.colors.error}
+                            style={{ borderColor: theme.colors.error }}
+                            icon="alert-circle-outline"
+                            onPress={handleDispute}
+                        >
+                            Komplain / Dispute
+                        </Button>
+                    </View>
+                )}
+
+                {/* View Active Dispute Button */}
+                {transaction?.dispute && (
+                    <View style={[styles.actionContainer, { backgroundColor: theme.colors.errorContainer }]}>
+                        <Button
+                            mode="text"
+                            textColor={theme.colors.error}
+                            icon="eye"
+                            onPress={handleViewDispute}
+                        >
+                            Lihat Detail Dispute
+                        </Button>
+                    </View>
+                )}
+            </View>
+
+            {isMessagesLoading ? (
                 <View style={[styles.container, styles.center]}>
                     <ActivityIndicator size="large" />
                 </View>
             ) : (
                 <FlatList
-                    inverted // Newest messages at bottom (visually), index 0 in data
+                    inverted
                     data={messages}
                     keyExtractor={(item) => item.id}
                     renderItem={renderMessage}
@@ -245,7 +307,7 @@ export default function ChatDetailScreen() {
                         if (hasNextPage) fetchNextPage();
                     }}
                     onEndReachedThreshold={0.5}
-                    initialNumToRender={15} // Optimization for initial load
+                    initialNumToRender={15}
                     ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={{ margin: 10 }} /> : null}
                 />
             )}
@@ -280,23 +342,34 @@ export default function ChatDetailScreen() {
                         leadingIcon="image"
                     />
                 </Menu>
-                <TextInput
-                    mode="outlined"
-                    placeholder="Type a message..."
-                    value={inputText}
-                    onChangeText={setInputText}
-                    style={styles.textInput}
-                    outlineStyle={styles.textInputOutline}
-                    dense
-                    multiline
-                    right={
-                        <TextInput.Icon
-                            icon="send"
-                            onPress={handleSend}
-                            disabled={!inputText.trim() || sendMessageMutation.isPending}
-                        />
+                <View style={[
+                    styles.textInputWrapper,
+                    {
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.outline,
                     }
-                />
+                ]}>
+                    <NativeTextInput
+                        placeholder="Type a message..."
+                        placeholderTextColor={theme.colors.onSurfaceVariant}
+                        value={inputText}
+                        onChangeText={setInputText}
+                        style={[
+                            styles.nativeInput,
+                            {
+                                color: theme.colors.onSurface,
+                            }
+                        ]}
+                        multiline
+                    />
+                    <IconButton
+                        icon="send"
+                        onPress={handleSend}
+                        disabled={!inputText.trim() || sendMessageMutation.isPending}
+                        iconColor={theme.colors.primary}
+                        size={24}
+                    />
+                </View>
             </View>
         </KeyboardAvoidingView>
     );
@@ -350,11 +423,30 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: "rgba(0,0,0,0.1)",
     },
-    textInput: {
+    textInputWrapper: {
         flex: 1,
-        marginRight: 4,
-    },
-    textInputOutline: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
         borderRadius: 24,
+        paddingLeft: 16,
+        paddingRight: 4,
+        marginRight: 4,
+        minHeight: 48, // Ensure minimum touch target
     },
+    nativeInput: {
+        flex: 1,
+        fontSize: 15,
+        maxHeight: 100,
+        paddingVertical: 8,
+        // textAlignVertical: 'center', // Not strictly needed if multiline behavior is handled by container alignment, but good to have reset
+    },
+    itemSummary: {
+        padding: 16,
+        backgroundColor: 'rgba(0,0,0,0.02)', // slight subtle bg
+    },
+    actionContainer: {
+        padding: 16,
+        alignItems: 'center',
+    }
 });

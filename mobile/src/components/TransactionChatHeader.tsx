@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { View, StyleSheet, TouchableOpacity, Platform, Text as NativeText } from "react-native";
 import { Text, IconButton, useTheme, Avatar } from "react-native-paper";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -101,9 +101,9 @@ export default function TransactionChatHeader({
 
             {/* Listing Summary */}
             <View style={[styles.listingRow, { backgroundColor: theme.colors.surfaceVariant }]}>
-                <Text variant="bodyMedium" numberOfLines={1} style={{ flex: 1, marginRight: 8, color: theme.colors.onSurfaceVariant }}>
+                <NativeText numberOfLines={1} style={{ flex: 1, marginRight: 8, color: theme.colors.onSurfaceVariant, fontSize: 14 }}>
                     {listingTitle}
-                </Text>
+                </NativeText>
                 <Text variant="bodyMedium" style={{ color: COLORS.brandPrimary, fontWeight: "bold" }}>
                     {formatPrice(listingPrice)}
                 </Text>
