@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { type Role } from "@/server/auth";
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET!;
+const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || process.env.NEXTAUTH_SECRET!;
 
 if (!JWT_SECRET) {
     throw new Error("NEXTAUTH_SECRET is not defined in environment variables");

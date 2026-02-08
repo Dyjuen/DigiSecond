@@ -35,7 +35,7 @@ export function useDeepLinkAuth() {
             processAuthUrl(event.url);
         };
 
-        const processAuthUrl = (url: string) => {
+        const processAuthUrl = async (url: string) => {
             const { hostname, queryParams } = Linking.parse(url);
 
             // Only process auth-callback deep links
@@ -78,7 +78,7 @@ export function useDeepLinkAuth() {
                 };
 
                 // Store auth data
-                setAuth(token, user);
+                await setAuth(token, user);
 
                 console.log("[DeepLink] Authentication successful:", user.email);
 

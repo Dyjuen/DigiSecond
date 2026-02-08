@@ -21,8 +21,8 @@ interface AuthState {
     token: string | null;
     user: User | null;
     isLoading: boolean;
-    setAuth: (token: string, user: User) => void;
-    clearAuth: () => void;
+    setAuth: (token: string, user: User) => Promise<void>;
+    clearAuth: () => Promise<void>;
     setLoading: (loading: boolean) => void;
     isTokenExpired: () => boolean;
     getTokenExpiry: () => Date | null;
@@ -38,8 +38,12 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             user: null,
             isLoading: true,
-            setAuth: (token, user) => set({ token, user, isLoading: false }),
-            clearAuth: () => set({ token: null, user: null, isLoading: false }),
+            setAuth: async (token: string, user: User) => {
+                set({ token, user, isLoading: false });
+            },
+            clearAuth: async () => {
+                set({ token: null, user: null, isLoading: false });
+            },
             setLoading: (isLoading) => set({ isLoading }),
 
             /**

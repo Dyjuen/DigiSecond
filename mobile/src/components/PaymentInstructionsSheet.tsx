@@ -78,6 +78,8 @@ export default function PaymentInstructionsSheet({
         }
     );
 
+    const simulateSuccessMutation = api.payment.simulateSuccess.useMutation();
+
     useEffect(() => {
         if (transactionStatus?.status === "PAID" || transactionStatus?.status === "COMPLETED") {
             onPaymentComplete();
@@ -262,6 +264,30 @@ export default function PaymentInstructionsSheet({
                         >
                             Pay Later
                         </Button>
+                        {/* Dev Only: Simulate Success */}
+                        {__DEV__ && (
+                            <Button
+                                mode="outlined"
+                                onPress={() => {
+                                    if (!transactionId) return;
+                                    simulateSuccessMutation.mutate(
+                                        { transaction_id: transactionId },
+                                        {
+                                            onSuccess: () => {
+                                                Alert.alert("Dev Mode", "Payment simulated!");
+                                                onPaymentComplete();
+                                            },
+                                            onError: (err) => Alert.alert("Error", err.message),
+                                        }
+                                    );
+                                }}
+                                style={{ marginTop: 8, borderColor: COLORS.warning }}
+                                textColor={COLORS.warning}
+                                loading={simulateSuccessMutation.isPending}
+                            >
+                                [DEV] Simulate Success
+                            </Button>
+                        )}
                     </View>
                 </Animated.View>
             </Modal>

@@ -150,7 +150,7 @@ export const messageRouter = createTRPCRouter({
                 transaction_id: z.string(),
                 limit: z.number().min(1).max(100).default(50),
                 cursor: z.string().optional(),
-                direction: z.enum(["older", "newer"]).default("older"),
+                sortOrder: z.enum(["older", "newer"]).default("older"),
             })
         )
         .query(async ({ ctx, input }) => {
@@ -173,13 +173,13 @@ export const messageRouter = createTRPCRouter({
                 throw new TRPCError({ code: "FORBIDDEN", message: "Anda tidak memiliki akses" });
             }
 
-            const { limit, cursor, direction } = input;
+            const { limit, cursor, sortOrder } = input;
 
             const messages = await ctx.db.message.findMany({
                 where: { transaction_id: input.transaction_id },
                 take: limit + 1,
                 cursor: cursor ? { message_id: cursor } : undefined,
-                orderBy: { created_at: direction === "older" ? "desc" : "asc" },
+                orderBy: { created_at: sortOrder === "older" ? "desc" : "asc" },
                 include: {
                     sender: {
                         select: {
@@ -198,7 +198,7 @@ export const messageRouter = createTRPCRouter({
             }
 
             // Reverse if getting newer messages to maintain chronological order
-            if (direction === "newer") {
+            if (sortOrder === "newer") {
                 messages.reverse();
             }
 

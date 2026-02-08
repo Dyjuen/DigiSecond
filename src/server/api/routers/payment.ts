@@ -279,7 +279,10 @@ export const paymentRouter = createTRPCRouter({
      * Used for testing the payment flow without actual Xendit
      */
     simulateSuccess: protectedProcedure
-        .input(z.object({ payment_id: z.string().uuid() }))
+        .input(z.object({
+            payment_id: z.string().uuid().optional(),
+            transaction_id: z.string().uuid().optional(),
+        }))
         .mutation(async ({ ctx, input }) => {
             // Only allow in development
             if (process.env.NODE_ENV === "production") {
@@ -289,14 +292,37 @@ export const paymentRouter = createTRPCRouter({
                 });
             }
 
-            const payment = await ctx.db.payment.findUnique({
-                where: { payment_id: input.payment_id },
-                include: {
-                    transaction: {
-                        include: { listing: true },
+            if (!input.payment_id && !input.transaction_id) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Harus menyertakan payment_id atau transaction_id",
+                });
+            }
+
+            let payment;
+            if (input.payment_id) {
+                payment = await ctx.db.payment.findUnique({
+                    where: { payment_id: input.payment_id },
+                    include: {
+                        transaction: {
+                            include: { listing: true },
+                        },
                     },
-                },
-            });
+                });
+            } else if (input.transaction_id) {
+                payment = await ctx.db.payment.findFirst({
+                    where: {
+                        transaction_id: input.transaction_id,
+                        status: PaymentStatus.PENDING,
+                    },
+                    include: {
+                        transaction: {
+                            include: { listing: true },
+                        },
+                    },
+                    orderBy: { created_at: "desc" },
+                });
+            }
 
             if (!payment) {
                 throw new TRPCError({
@@ -318,7 +344,7 @@ export const paymentRouter = createTRPCRouter({
             await ctx.db.$transaction(async (tx) => {
                 // Mark payment as paid
                 await tx.payment.update({
-                    where: { payment_id: input.payment_id },
+                    where: { payment_id: payment.payment_id },
                     data: {
                         status: PaymentStatus.PAID,
                         paid_at: now,

@@ -165,6 +165,18 @@ export default function ProfileScreen() {
                 >
                     Simpan Perubahan
                 </Button>
+
+                <Button
+                    mode="outlined"
+                    onPress={async () => {
+                        await useAuthStore.getState().clearAuth();
+                        router.replace("/login");
+                    }}
+                    style={{ marginTop: 12, borderColor: theme.colors.error }}
+                    textColor={theme.colors.error}
+                >
+                    Logout
+                </Button>
             </View>
         </ScrollView>
     );

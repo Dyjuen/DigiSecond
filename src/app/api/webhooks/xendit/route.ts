@@ -121,6 +121,18 @@ export async function POST(req: NextRequest) {
 
         if (!payment) {
             console.log(`[Xendit Webhook] Payment not found for xendit_id: ${xenditId}`);
+
+            // Log this failure to AuditLog so we can see it
+            await db.auditLog.create({
+                data: {
+                    entity_type: "Webhook",
+                    entity_id: xenditId,
+                    action_type: "PAYMENT_NOT_FOUND",
+                    action_description: `Payment not found for xendit_id: ${xenditId}, transaction_id: ${transactionId}`,
+                    new_value: { payload: payload as any },
+                },
+            });
+
             // Return 200 to prevent Xendit from retrying
             return NextResponse.json(
                 { message: "Payment not found, skipping" },
