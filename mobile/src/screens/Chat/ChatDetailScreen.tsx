@@ -95,6 +95,17 @@ export default function ChatDetailScreenV2() {
         }
     });
 
+    const confirmReceivedMutation = api.transaction.confirmReceived.useMutation({
+        onSuccess: () => {
+            Alert.alert("Berhasil", "Transaksi selesai. Terima kasih!");
+            utils.transaction.getById.invalidate({ transaction_id: id });
+            refetchTransaction();
+        },
+        onError: (error) => {
+            Alert.alert("Gagal", error.message);
+        }
+    });
+
     // Removed Supabase Realtime subscription to match Web implementation
     // and avoid Auth/JWT connection issues.
 
@@ -150,6 +161,20 @@ export default function ChatDetailScreenV2() {
             pathname: "/dispute/create",
             params: { transactionId: id }
         } as any);
+    };
+
+    const handleConfirmReceived = () => {
+        Alert.alert(
+            "Konfirmasi Penerimaan",
+            "Apakah Anda yakin barang sudah diterima dengan baik? Dana akan diteruskan ke penjual dan transaksi selesai.",
+            [
+                { text: "Batal", style: "cancel" },
+                {
+                    text: "Ya, Terima Barang",
+                    onPress: () => confirmReceivedMutation.mutate({ transaction_id: id })
+                }
+            ]
+        );
     };
 
     const handleViewDispute = () => {
@@ -264,15 +289,27 @@ export default function ChatDetailScreenV2() {
 
                 {/* Dispute / Action Buttons */}
                 {transaction && currentStatus === 'ITEM_TRANSFERRED' && isBuyer && !transaction.dispute && (
-                    <View style={styles.actionContainer}>
+                    <View style={[styles.actionContainer, { flexDirection: 'row', justifyContent: 'space-between', gap: 8 }]}>
                         <Button
                             mode="outlined"
                             textColor={theme.colors.error}
-                            style={{ borderColor: theme.colors.error }}
+                            style={{ borderColor: theme.colors.error, flex: 1 }}
                             icon="alert-circle-outline"
                             onPress={handleDispute}
                         >
-                            Komplain / Dispute
+                            Komplain
+                        </Button>
+                        <Button
+                            mode="contained"
+                            buttonColor={theme.colors.primary}
+                            textColor={theme.colors.onPrimary}
+                            style={{ flex: 1 }}
+                            icon="check-circle-outline"
+                            onPress={handleConfirmReceived}
+                            loading={confirmReceivedMutation.isPending}
+                            disabled={confirmReceivedMutation.isPending}
+                        >
+                            Konfirmasi
                         </Button>
                     </View>
                 )}

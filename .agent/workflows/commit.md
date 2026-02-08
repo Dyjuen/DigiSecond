@@ -27,7 +27,7 @@ pnpm tsc --noEmit
 pnpm lint
 ```
 
-## 4. Review Changes with Git Diff
+## 4. Code Review
 
 ```bash
 git diff --staged

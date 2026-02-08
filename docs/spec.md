@@ -500,6 +500,25 @@ erDiagram
 - Reviewer deletes account: keep review, show "Deleted user"
 - Review text is whitespace-only: validate minimum meaningful content
 
+
+---
+
+### 5.7 Wishlist
+
+#### ⭐ Manage Wishlist
+
+**User Story**: As a buyer, I want to save listings to a wishlist so I can easily find them later.
+
+**Acceptance Criteria**:
+- [ ] Toggle button (heart icon) on listing card and detail view
+- [ ] View list of wishlisted items
+- [ ] Remove items from wishlist
+- [ ] Persist wishlist across sessions (for logged-in users)
+
+**Edge Cases**:
+- Item in wishlist is sold/deleted: show as unavailable or remove automatically
+- Guest user: prompt to login or store locally (MVP: require login)
+
 ---
 
 ## 6. API Contracts
@@ -591,6 +610,14 @@ src/server/api/routers/
 |-----------|------|-------------|
 | `review.create` | mutation | Submit review |
 | `review.getByUser` | query | Get user's reviews |
+
+#### Wishlist Router
+
+| Procedure | Type | Description |
+|-----------|------|-------------|
+| `wishlist.toggle` | mutation | Add/remove listing from wishlist |
+| `wishlist.getAll` | query | Get user's wishlist |
+| `wishlist.check` | query | Check if listing is in wishlist |
 
 ---
 
