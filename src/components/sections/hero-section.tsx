@@ -207,14 +207,14 @@ export function HeroSection() {
                                             </p>
 
                                             <div className="mt-auto pt-4 border-t border-zinc-800/50 flex items-center justify-between relative z-10">
-                                                <div>
-                                                    <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-0.5">Current Price</p>
-                                                    <div className="flex items-baseline gap-1">
-                                                        <span className="text-sm font-semibold text-brand-primary">Rp</span>
-                                                        <span className="text-2xl font-black text-white tracking-tight">
-                                                            {listings[selectedListing].price.toLocaleString("id-ID")}
-                                                        </span>
-                                                    </div>
+                                                <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-0.5">
+                                                    {listings[selectedListing].listing_type === "AUCTION" ? "Current Bid" : "Current Price"}
+                                                </p>
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-sm font-semibold text-brand-primary">Rp</span>
+                                                    <span className="text-2xl font-black text-white tracking-tight">
+                                                        {(listings[selectedListing].current_bid ?? listings[selectedListing].starting_bid ?? listings[selectedListing].price).toLocaleString("id-ID")}
+                                                    </span>
                                                 </div>
                                                 <Link href={`/listings/${listings[selectedListing].listing_id}`}>
                                                     <Button className="h-10 px-5 bg-white text-black hover:bg-zinc-200 font-bold rounded-xl transition-transform hover:-translate-y-0.5">

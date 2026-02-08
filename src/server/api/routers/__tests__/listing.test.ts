@@ -600,7 +600,7 @@ describe("Listing Router", () => {
 
             await expect(
                 caller.listing.placeBid({
-                    listing_id: listing.listing_id,
+                    listingId: listing.listing_id,
                     amount: 60000,
                 })
             ).rejects.toThrow(TRPCError);
@@ -641,7 +641,7 @@ describe("Listing Router", () => {
             }));
 
             const result = await caller.listing.placeBid({
-                listing_id: listing.listing_id,
+                listingId: listing.listing_id,
                 amount: 60000,
             });
 

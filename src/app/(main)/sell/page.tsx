@@ -31,6 +31,7 @@ const listingSchema = z.object({
     price: z.coerce.number().min(10000, "Harga minimal Rp 10.000").max(2000000000, "Harga maksimal 2 Milyar"),
     category_id: z.string().min(1, "Pilih kategori"),
     listing_type: z.enum(["FIXED", "AUCTION"]),
+    duration: z.coerce.number().min(1, "Durasi minimal 1 jam").optional(),
     username: z.string().optional(),
     password: z.string().optional(),
 });
@@ -71,10 +72,13 @@ export default function SellPage() {
             price: undefined,
             category_id: "",
             listing_type: "FIXED",
+            duration: 24, // Default 24 hours
             username: "",
             password: "",
         },
     });
+
+    const listingType = form.watch("listing_type");
 
     const onSubmit = async (data: ListingFormValues, isDraft: boolean) => {
         if (files.length === 0) {
@@ -82,12 +86,22 @@ export default function SellPage() {
         }
 
         try {
+            let auctionEndsAt: Date | undefined;
+            if (data.listing_type === "AUCTION" && data.duration) {
+                const endDate = new Date();
+                endDate.setHours(endDate.getHours() + data.duration);
+                auctionEndsAt = endDate;
+            }
+
             await createListing.mutateAsync({
                 title: data.title,
                 description: data.description,
                 price: data.price,
                 category_id: data.category_id,
                 listing_type: data.listing_type,
+                auction_ends_at: auctionEndsAt,
+                status: isDraft ? "DRAFT" : "ACTIVE",
+                // photos, files logic would be here if implemented fully
             });
         } catch (error) {
             console.error(error);
@@ -221,6 +235,25 @@ export default function SellPage() {
                             <option value="AUCTION">Lelang (Auction)</option>
                         </select>
                     </div>
+
+                    {listingType === "AUCTION" && (
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-900 dark:text-white mb-2">
+                                Durasi Lelang (Jam)
+                            </label>
+                            <input
+                                type="number"
+                                {...form.register("duration")}
+                                placeholder="24"
+                                min={1}
+                                className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                            {form.formState.errors.duration && (
+                                <p className="text-xs text-red-500 mt-1">{form.formState.errors.duration.message}</p>
+                            )}
+                            <p className="text-xs text-zinc-500 mt-1">Masukkan durasi dalam jam (Contoh: 24 = 1 Hari)</p>
+                        </div>
+                    )}
 
                     {/* Account Credentials */}
                     <div className="border border-zinc-300 dark:border-zinc-700 rounded-xl p-6 bg-white dark:bg-zinc-900">

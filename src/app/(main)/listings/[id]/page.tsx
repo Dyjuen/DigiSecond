@@ -6,10 +6,11 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TransactionChat } from "@/components/chat/TransactionChat";
 import { Countdown } from "@/components/ui/countdown";
 import { toast } from "sonner";
+import { Heart, Loader2 } from "lucide-react";
 
 // Game Logos
 import mobileLegendsLogo from "@/assets/images/Mobile-legends-logo.svg.png";
@@ -37,10 +38,68 @@ export default function ListingDetailPage() {
     const [chatAction, setChatAction] = useState<"buy_now" | null>(null);
     const [bidAmount, setBidAmount] = useState("");
     const [isBidding, setIsBidding] = useState(false);
+    const [isFinishing, setIsFinishing] = useState(false);
+    const [showFinishModal, setShowFinishModal] = useState(false);
 
     const listingId = params.id as string;
 
-    const { data: listing, isLoading } = api.listing.getById.useQuery({ id: listingId });
+    const { data: listing, isLoading, refetch } = api.listing.getById.useQuery({ id: listingId });
+
+    // Wishlist Logic
+    const utils = api.useUtils();
+    const { data: wishlistData } = api.wishlist.check.useQuery(
+        { listingId },
+        { enabled: !!session?.user }
+    );
+    const toggleWishlist = api.wishlist.toggle.useMutation({
+        onSuccess: (data) => {
+            utils.wishlist.check.invalidate({ listingId });
+            toast.success(data.added ? "Ditambahkan ke Wishlist" : "Dihapus dari Wishlist");
+        },
+        onError: () => {
+            toast.error("Gagal mengupdate wishlist");
+        }
+    });
+
+    const finishAuction = api.listing.finishAuction.useMutation({
+        onSuccess: (data) => {
+            toast.success(data.message);
+            refetch();
+            setIsFinishing(false);
+            if (data.status === "PENDING_PAYMENT") {
+                router.push("/transactions"); // Or wherever appropriate
+            }
+        },
+        onError: (err) => {
+            toast.error(err.message);
+            setIsFinishing(false);
+        }
+    });
+
+    const placeBidMutation = api.listing.placeBid.useMutation({
+        onSuccess: () => {
+            setIsBidding(false);
+            setBidAmount("");
+            toast.success("Penawaran Berhasil!", {
+                description: `Anda telah menawar sebesar Rp ${Number(bidAmount).toLocaleString("id-ID")}`,
+            });
+            refetch();
+        },
+        onError: (err) => {
+            setIsBidding(false);
+            toast.error(err.message);
+        }
+    });
+
+
+
+    const handleWishlist = () => {
+        if (!session?.user) {
+            router.push("/login"); // Or open login modal
+            return;
+        }
+        toggleWishlist.mutate({ listingId });
+    };
 
     if (isLoading) {
         return (
@@ -67,6 +126,16 @@ export default function ListingDetailPage() {
         );
     }
 
+    const handleFinishAuction = () => {
+        setShowFinishModal(true);
+    };
+
+    const confirmFinishAuction = () => {
+        setShowFinishModal(false);
+        setIsFinishing(true);
+        finishAuction.mutate({ listingId });
+    };
+
     const handleChat = () => {
         if (!session?.user) {
             router.push("/login");
@@ -84,19 +153,18 @@ export default function ListingDetailPage() {
         setShowChatModal(true);
     };
 
+
+
     const handlePlaceBid = () => {
         if (!session?.user) {
             router.push("/login");
             return;
         }
         setIsBidding(true);
-        // Simulate API call
-        setTimeout(() => {
-            setIsBidding(false);
-            setBidAmount("");
-            alert("Penawaran Anda berhasil dikirim!");
-            // In real app, this would update the bid list via mutation
-        }, 1000);
+        placeBidMutation.mutate({
+            listingId: listing.listing_id,
+            amount: Number(bidAmount)
+        });
     };
 
     const isAuction = listing.listing_type === "AUCTION";
@@ -210,9 +278,37 @@ export default function ListingDetailPage() {
                             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
                                 <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">Riwayat Penawaran</h2>
                                 <div className="space-y-4">
-                                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl text-center text-zinc-500">
-                                        Belum ada penawaran. Jadilah yang pertama!
-                                    </div>
+                                    {listing.bids && listing.bids.length > 0 ? (
+                                        listing.bids.map((bid: any, index: number) => (
+                                            <div key={bid.bid_id} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? "bg-amber-100 text-amber-600" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-500"}`}>
+                                                        {index === 0 ? "👑" : `#${index + 1}`}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                                                            {bid.bidderName.substring(0, 2) + "***" + bid.bidderName.substring(bid.bidderName.length - 2)}
+                                                        </p>
+                                                        <p className="text-xs text-zinc-500">
+                                                            {new Date(bid.created_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })} WIB
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className={`font-bold ${index === 0 ? "text-brand-primary" : "text-zinc-700 dark:text-zinc-300"}`}>
+                                                        Rp {bid.bid_amount.toLocaleString("id-ID")}
+                                                    </p>
+                                                    {index === 0 && (
+                                                        <p className="text-[10px] text-brand-primary font-medium">Tertinggi</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl text-center text-zinc-500">
+                                            Belum ada penawaran. Jadilah yang pertama!
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -228,9 +324,17 @@ export default function ListingDetailPage() {
                                 <h1 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
                                     {listing.title}
                                 </h1>
-                                <div className="flex items-center gap-2 text-sm text-zinc-500">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                    <span>{listing.view_count.toLocaleString()} views</span>
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-2 text-sm text-zinc-500">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                        <span>{listing.view_count.toLocaleString()} views</span>
+                                    </div>
+                                    <button
+                                        onClick={handleWishlist}
+                                        className={`p-2 rounded-full transition-all ${wishlistData?.isWishlisted ? "bg-red-50 text-red-500" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-red-500"}`}
+                                    >
+                                        <Heart className={`w-6 h-6 ${wishlistData?.isWishlisted ? "fill-current" : ""}`} />
+                                    </button>
                                 </div>
                             </div>
 
@@ -259,7 +363,7 @@ export default function ListingDetailPage() {
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">Rp</span>
                                                 <input
                                                     type="text"
-                                                    placeholder={`Min. ${((listing.current_bid || listing.starting_bid || 0) + (listing.bid_increment || 10000)).toLocaleString("id-ID")}`}
+                                                    placeholder={`Min. ${((listing.current_bid ?? listing.starting_bid ?? 0) + (listing.bid_increment ?? 10000)).toLocaleString("id-ID")}`}
                                                     value={bidAmount ? Number(bidAmount).toLocaleString("id-ID") : ""}
                                                     onChange={(e) => {
                                                         const rawValue = e.target.value.replace(/\D/g, "");
@@ -296,6 +400,24 @@ export default function ListingDetailPage() {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                                         </svg>
                                         {isOwner ? "Listing Anda Sendiri" : "Beli Sekarang"}
+                                    </Button>
+                                )}
+
+                                {isOwner && isAuction && listing.status === "ACTIVE" && (
+                                    <Button
+                                        variant="destructive"
+                                        className="w-full h-12 text-base font-bold"
+                                        onClick={handleFinishAuction}
+                                        disabled={isFinishing}
+                                    >
+                                        {isFinishing ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                                Memproses...
+                                            </>
+                                        ) : (
+                                            listing.bidCount > 0 ? "Selesaikan Lelang (Pilih Pemenang)" : "Batalkan Lelang"
+                                        )}
                                     </Button>
                                 )}
 
@@ -348,6 +470,49 @@ export default function ListingDetailPage() {
                     action={chatAction}
                     onActionHandled={() => setChatAction(null)}
                 />
+
+                {/* Finish Auction Confirmation Modal */}
+                {showFinishModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl max-w-md w-full mx-4 border border-zinc-200 dark:border-zinc-800">
+                            <div className="p-6">
+                                <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
+                                    {listing.bidCount > 0 ? "Selesaikan Lelang?" : "Batalkan Lelang?"}
+                                </h3>
+                                <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                                    {listing.bidCount > 0
+                                        ? "Apakah Anda yakin ingin menyelesaikan lelang ini sekarang? Pemenang akan ditentukan dari penawar tertinggi saat ini."
+                                        : "Apakah Anda yakin ingin membatalkan lelang ini? Listing akan dinonaktifkan."}
+                                </p>
+                                <div className="flex gap-3">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowFinishModal(false)}
+                                        className="flex-1 rounded-xl"
+                                    >
+                                        Batal
+                                    </Button>
+                                    <Button
+                                        onClick={confirmFinishAuction}
+                                        className="flex-1 rounded-xl bg-brand-primary hover:bg-brand-primary-dark"
+                                        disabled={isFinishing}
+                                    >
+                                        {isFinishing ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Memproses...
+                                            </>
+                                        ) : listing.bidCount > 0 ? (
+                                            "Selesaikan"
+                                        ) : (
+                                            "Batalkan Lelang"
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
