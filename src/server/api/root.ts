@@ -11,6 +11,7 @@ import { reviewRouter } from "./routers/review";
 import { systemConfigRouter } from "./routers/systemConfig";
 
 import { categoryRouter } from "./routers/category";
+import { wishlistRouter } from "./routers/wishlist";
 
 /**
  * This is the primary router for your server.
@@ -29,6 +30,7 @@ export const appRouter = createTRPCRouter({
     message: messageRouter,
     review: reviewRouter,
     category: categoryRouter,
+    wishlist: wishlistRouter,
 });
 
 export type AppRouter = typeof appRouter;

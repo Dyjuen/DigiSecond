@@ -42,6 +42,7 @@ model User {
   @@index([email])
   @@index([role])
   @@map("m_users")
+  wishlists          Wishlist[]
 }
 
 /// Account: OAuth provider accounts untuk NextAuth.js
@@ -160,6 +161,7 @@ model Listing {
   @@index([listing_type])
   @@index([created_at(sort: Desc)])
   @@map("t_listings")
+  wishlists       Wishlist[]
 }
 
 /// Bid: Auction bids - immutable append-only table
@@ -500,4 +502,20 @@ enum NotificationType {
   AUCTION_WON
   AUCTION_ENDING_SOON
   PAYOUT_COMPLETED
+  AUCTION_ENDED_NO_BIDS
+}
+
+/// Wishlist: User saved listings
+model Wishlist {
+  wishlist_id String   @id @default(uuid())
+  user_id     String
+  listing_id  String
+  created_at  DateTime @default(now())
+  user        User     @relation(fields: [user_id], references: [user_id])
+  listing     Listing  @relation(fields: [listing_id], references: [listing_id])
+
+  @@unique([user_id, listing_id])
+  @@index([user_id])
+  @@index([listing_id])
+  @@map("t_wishlists")
 }
