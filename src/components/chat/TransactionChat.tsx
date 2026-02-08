@@ -179,6 +179,7 @@ export function TransactionChat(props: TransactionChatProps) {
 
     const [transactionId, setTransactionId] = useState<string | null>(existingTransactionId || null);
     const [paymentId, setPaymentId] = useState<string | null>(null);
+    const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
     const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>("INQUIRY");
 
     const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -222,6 +223,7 @@ export function TransactionChat(props: TransactionChatProps) {
     const createPayment = api.payment.create.useMutation({
         onSuccess: (data) => {
             setPaymentId(data.payment_id);
+            setInvoiceUrl(data.invoice_url);
             addSystemMessage(`Invoice dibuat: Rp ${listing.price.toLocaleString("id-ID")}. Silakan bayar.`);
             setIsProcessing(false);
         },
@@ -530,12 +532,35 @@ export function TransactionChat(props: TransactionChatProps) {
 
                         {
                             transactionStatus === "PENDING_PAYMENT" && isBuyer && (
-                                <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                                <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
                                     <p className="text-sm text-zinc-500 text-center">Menunggu pembayaran...</p>
-                                    {paymentId ? (
-                                        <Button className="w-full" variant="outline" onClick={handleSimulatePayment} disabled={simulatePayment.isPending}>
-                                            {simulatePayment.isPending ? "Memproses..." : "Simulasi Pembayaran (Dev)"}
-                                        </Button>
+                                    {paymentId && invoiceUrl ? (
+                                        <>
+                                            {/* Info box */}
+                                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                                    💡 <strong>Test Mode:</strong> Anda akan diarahkan ke dashboard Xendit. Pilih metode pembayaran (BCA, QRIS, dll) dan klik tombol simulasi pembayaran di sana.
+                                                </p>
+                                            </div>
+
+                                            {/* Primary: Open Xendit Dashboard */}
+                                            <Button
+                                                className="w-full bg-brand-primary hover:bg-brand-primary/90"
+                                                onClick={() => window.open(invoiceUrl, '_blank')}
+                                            >
+                                                🚀 Bayar Sekarang di Xendit
+                                            </Button>
+
+                                            {/* Secondary: Quick simulation for dev */}
+                                            <Button
+                                                className="w-full"
+                                                variant="outline"
+                                                onClick={handleSimulatePayment}
+                                                disabled={simulatePayment.isPending}
+                                            >
+                                                {simulatePayment.isPending ? "Memproses..." : "⚡ Simulasi Cepat (Dev)"}
+                                            </Button>
+                                        </>
                                     ) : (
                                         <Button
                                             className="w-full"
