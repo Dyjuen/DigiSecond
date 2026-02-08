@@ -24,54 +24,58 @@ export default function AuthCallbackScreen() {
     const [errorMessage, setErrorMessage] = useState("");
 
     useEffect(() => {
-        if (!token) {
-            setStatus("error");
-            setErrorMessage("No authentication token provided");
-            return;
-        }
-
-        try {
-            // Decode JWT to extract user info
-            // JWT format: header.payload.signature
-            const payloadBase64 = token.split(".")[1];
-            if (!payloadBase64) {
-                throw new Error("Invalid token format");
+        const processToken = async () => {
+            if (!token) {
+                setStatus("error");
+                setErrorMessage("No authentication token provided");
+                return;
             }
 
-            // Decode base64url (replace - with +, _ with /, and pad)
-            const base64 = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
-            const paddedBase64 = base64.padEnd(
-                base64.length + ((4 - (base64.length % 4)) % 4),
-                "="
-            );
-            const jsonPayload = atob(paddedBase64);
-            const payload = JSON.parse(jsonPayload);
+            try {
+                // Decode JWT to extract user info
+                // JWT format: header.payload.signature
+                const payloadBase64 = token.split(".")[1];
+                if (!payloadBase64) {
+                    throw new Error("Invalid token format");
+                }
 
-            // Extract user data from JWT payload
-            const user = {
-                id: payload.sub,
-                email: payload.email,
-                name: payload.name || payload.email,
-                avatar: null,
-                role: payload.role,
-                verified: payload.verified,
-            };
+                // Decode base64url (replace - with +, _ with /, and pad)
+                const base64 = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+                const paddedBase64 = base64.padEnd(
+                    base64.length + ((4 - (base64.length % 4)) % 4),
+                    "="
+                );
+                const jsonPayload = atob(paddedBase64);
+                const payload = JSON.parse(jsonPayload);
 
-            // Store auth data
-            setAuth(token, user);
-            setStatus("success");
+                // Extract user data from JWT payload
+                const user = {
+                    id: payload.sub,
+                    email: payload.email,
+                    name: payload.name || payload.email,
+                    avatar: null,
+                    role: payload.role,
+                    verified: payload.verified,
+                };
 
-            console.log("[AuthCallback] Authentication successful:", user.email);
+                // Store auth data
+                await setAuth(token, user);
+                setStatus("success");
 
-            // Navigate to home screen after a brief delay
-            setTimeout(() => {
-                router.replace("/(tabs)");
-            }, 1500);
-        } catch (error) {
-            console.error("[AuthCallback] Failed to process auth token:", error);
-            setStatus("error");
-            setErrorMessage(error instanceof Error ? error.message : "Failed to process authentication");
-        }
+                console.log("[AuthCallback] Authentication successful:", user.email);
+
+                // Navigate to home screen after a brief delay
+                setTimeout(() => {
+                    router.replace("/(tabs)");
+                }, 1500);
+            } catch (error) {
+                console.error("[AuthCallback] Failed to process auth token:", error);
+                setStatus("error");
+                setErrorMessage(error instanceof Error ? error.message : "Failed to process authentication");
+            }
+        };
+
+        processToken();
     }, [token, setAuth]);
 
     const backgroundColor = isDarkMode ? "#171717" : "#f5f5f5";
