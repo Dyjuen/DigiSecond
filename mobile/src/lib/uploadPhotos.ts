@@ -1,6 +1,10 @@
 import { Alert } from "react-native";
 import { api } from "./api";
 
+type UploadMutation = {
+    mutateAsync: (variables: { fileName: string; fileType: "image/jpeg" | "image/png" | "image/webp" }) => Promise<{ uploadUrl: string; publicUrl: string }>;
+};
+
 /**
  * Upload local photo URIs to Supabase storage
  * Preserves existing remote URLs (http/https)
@@ -8,7 +12,7 @@ import { api } from "./api";
  */
 export async function uploadPhotos(
     localUris: string[],
-    uploadPhotoMutation: ReturnType<typeof api.listing.uploadPhoto.useMutation>
+    uploadPhotoMutation: UploadMutation
 ): Promise<string[]> {
     const uploadedUrls: string[] = [];
 
