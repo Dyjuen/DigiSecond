@@ -23,6 +23,7 @@ describe("Admin Router", () => {
     const testDisputeIds: string[] = [];
 
     let testSellerId: string;
+    let testAdminId: string;
     let testCategoryId: string;
 
     beforeAll(async () => {
@@ -40,6 +41,19 @@ describe("Admin Router", () => {
             },
         });
         testSellerId = seller.user_id;
+
+        // Create test admin
+        const adminEmail = testEmail();
+        testEmails.push(adminEmail);
+
+        const admin = await db.user.create({
+            data: {
+                email: adminEmail,
+                name: "Real Admin User",
+                role: "ADMIN",
+            },
+        });
+        testAdminId = admin.user_id;
 
         // Get or create test category
         let category = await db.category.findFirst();
@@ -79,7 +93,7 @@ describe("Admin Router", () => {
         });
 
         it("should return all dashboard metrics", async () => {
-            const caller = createTestCaller(createAdminContext());
+            const caller = createTestCaller(createAdminContext({ id: testAdminId }));
             const stats = await caller.admin.getDashboardStats();
 
             expect(stats).toHaveProperty("totalUsers");
@@ -423,7 +437,7 @@ describe("Admin Router", () => {
             });
             testDisputeIds.push(dispute.dispute_id);
 
-            const caller = createTestCaller(createAdminContext());
+            const caller = createTestCaller(createAdminContext({ id: testAdminId }));
             const result = await caller.admin.resolveDispute({
                 dispute_id: dispute.dispute_id,
                 resolution: "FULL_REFUND",
@@ -480,10 +494,11 @@ describe("Admin Router", () => {
             });
             testDisputeIds.push(dispute.dispute_id);
 
-            const caller = createTestCaller(createAdminContext());
+            const caller = createTestCaller(createAdminContext({ id: testAdminId }));
             const result = await caller.admin.resolveDispute({
                 dispute_id: dispute.dispute_id,
                 resolution: "PARTIAL_REFUND",
+                partial_refund_amount: 50000,
             });
 
             expect(result.resolution).toBe("PARTIAL_REFUND");
@@ -537,7 +552,7 @@ describe("Admin Router", () => {
             });
             testDisputeIds.push(dispute.dispute_id);
 
-            const caller = createTestCaller(createAdminContext());
+            const caller = createTestCaller(createAdminContext({ id: testAdminId }));
             const result = await caller.admin.resolveDispute({
                 dispute_id: dispute.dispute_id,
                 resolution: "NO_REFUND",

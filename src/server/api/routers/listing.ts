@@ -388,9 +388,10 @@ export const listingRouter = createTRPCRouter({
                 }
             }
 
-            // Hard delete the listing
-            return ctx.db.listing.delete({
+            // Soft delete (mark as CANCELLED)
+            return ctx.db.listing.update({
                 where: { listing_id: input.listingId },
+                data: { status: "CANCELLED" },
             });
         }),
 
@@ -638,6 +639,15 @@ export const listingRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const { db, session } = ctx;
             const userId = session.user.id;
+
+            // KYC GUARD for Bidding
+            const user = await db.user.findUnique({ where: { user_id: userId } });
+            if (!user?.phone || !user?.id_card_url) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Harap lengkapi profil (No. HP & KTP) sebelum menawar.",
+                });
+            }
 
             return await db.$transaction(async (tx) => {
                 const listing = await tx.listing.findUnique({

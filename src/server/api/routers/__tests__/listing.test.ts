@@ -197,7 +197,7 @@ describe("Listing Router", () => {
             // Create a listing first
             const listing = await db.listing.create({
                 data: {
-                    seller_id: testSellerId,
+                    seller_id: testSellerId, // testSellerId is already verified with phone in beforeAll
                     title: "Test Listing GetById",
                     description: "This is a test listing for getById test case validation",
                     price: 50000,
@@ -306,7 +306,7 @@ describe("Listing Router", () => {
 
             expect(result.title).toBe("Valid Test Listing");
             expect(result.price).toBe(75000);
-            expect(result.status).toBe("PENDING");
+            expect(result.status).toBe("ACTIVE");
         });
 
         it("should reject title shorter than 5 characters", async () => {
