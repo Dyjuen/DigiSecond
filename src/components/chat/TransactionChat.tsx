@@ -529,12 +529,23 @@ export function TransactionChat(props: TransactionChatProps) {
                         }
 
                         {
-                            transactionStatus === "PENDING_PAYMENT" && isBuyer && paymentId && (
+                            transactionStatus === "PENDING_PAYMENT" && isBuyer && (
                                 <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
                                     <p className="text-sm text-zinc-500 text-center">Menunggu pembayaran...</p>
-                                    <Button className="w-full" variant="outline" onClick={handleSimulatePayment} disabled={simulatePayment.isPending}>
-                                        {simulatePayment.isPending ? "Memproses..." : "Simulasi Pembayaran (Dev)"}
-                                    </Button>
+                                    {paymentId ? (
+                                        <Button className="w-full" variant="outline" onClick={handleSimulatePayment} disabled={simulatePayment.isPending}>
+                                            {simulatePayment.isPending ? "Memproses..." : "Simulasi Pembayaran (Dev)"}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            className="w-full"
+                                            variant="outline"
+                                            onClick={() => transactionId && createPayment.mutate({ transaction_id: transactionId })}
+                                            disabled={createPayment.isPending}
+                                        >
+                                            {createPayment.isPending ? "Membuat Invoice..." : "Buat Invoice Pembayaran"}
+                                        </Button>
+                                    )}
                                 </div>
                             )
                         }
