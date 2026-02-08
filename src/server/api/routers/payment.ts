@@ -351,10 +351,17 @@ export const paymentRouter = createTRPCRouter({
                     },
                 });
 
+                // Check for auto-delivery (digital goods)
+                const listing = payment.transaction.listing;
+                // @ts-ignore - Fields might be missing in generated types if not regenerated, but they exist in DB
+                const hasAutoDelivery = listing.login_username || listing.digital_file_url || listing.access_code;
+
+                const nextStatus = hasAutoDelivery ? TransactionStatus.ITEM_TRANSFERRED : TransactionStatus.PAID;
+
                 // Update transaction status
                 await tx.transaction.update({
                     where: { transaction_id: payment.transaction_id },
-                    data: { status: TransactionStatus.PAID },
+                    data: { status: nextStatus },
                 });
 
                 // Update listing status
@@ -363,13 +370,60 @@ export const paymentRouter = createTRPCRouter({
                     data: { status: ListingStatus.SOLD },
                 });
 
+                // Handle Auto-Delivery Message
+                if (hasAutoDelivery) {
+                    let deliveryMessage = "🤖 **SYSTEM AUTO-DELIVERY** 🤖\n\n";
+                    deliveryMessage += "Terima kasih telah melakukan pembayaran. Berikut adalah detail pesanan Anda:\n\n";
+
+                    // @ts-ignore
+                    if (listing.login_username) {
+                        deliveryMessage += `👤 **Username:** \`${listing.login_username}\`\n`;
+                    }
+                    // @ts-ignore
+                    if (listing.login_password) {
+                        deliveryMessage += `🔑 **Password:** \`${listing.login_password}\`\n`;
+                    }
+                    // @ts-ignore
+                    if (listing.digital_file_url) {
+                        deliveryMessage += `📂 **File Download:** [Klik untuk Download](${listing.digital_file_url})\n`;
+                    }
+                    // @ts-ignore
+                    if (listing.access_code) {
+                        deliveryMessage += `🔐 **Access Code:** \`${listing.access_code}\`\n`;
+                    }
+
+                    deliveryMessage += "\n⚠️ Harap segera amankan akun/data tersebut. Jangan lupa konfirmasi 'Pesanan Diterima' jika sudah sesuai.";
+
+                    // Create message from Seller (as Auto-System)
+                    await tx.message.create({
+                        data: {
+                            transaction_id: payment.transaction_id,
+                            sender_user_id: payment.transaction.seller_id,
+                            message_content: deliveryMessage,
+                        }
+                    });
+
+                    // Notification for Buyer
+                    await tx.notification.create({
+                        data: {
+                            user_id: payment.transaction.buyer_id,
+                            notification_type: "ITEM_TRANSFERRED",
+                            title: "Pesanan Dikirim Otomatis",
+                            body: `Detail akun/file untuk "${listing.title}" telah dikirim melalui chat.`,
+                            data_payload: {
+                                transaction_id: payment.transaction_id,
+                            },
+                        },
+                    });
+                }
+
                 // Create notification for seller
                 await tx.notification.create({
                     data: {
                         user_id: payment.transaction.seller_id,
                         notification_type: "PAYMENT_RECEIVED",
                         title: "Pembayaran Diterima",
-                        body: `Pembayaran untuk "${payment.transaction.listing.title}" telah diterima. Silakan kirim item ke pembeli.`,
+                        body: `Pembayaran untuk "${payment.transaction.listing.title}" telah diterima.${hasAutoDelivery ? " Sistem telah mengirimkan detail data ke pembeli secara otomatis." : " Silakan kirim item ke pembeli."}`,
                         data_payload: {
                             transaction_id: payment.transaction_id,
                             amount: payment.payment_amount,

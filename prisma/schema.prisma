@@ -16,7 +16,7 @@ model User {
   name               String
   avatar_url         String?
   password_hash      String?
-  role               UserRole       @default(BUYER)
+  role               UserRole       @default(USER)
   rating             Float          @default(0)
   rating_count       Int            @default(0)
   is_verified        Boolean        @default(false)
@@ -25,12 +25,14 @@ model User {
   updated_at         DateTime       @updatedAt
   id_card_url        String?
   tier               UserTier       @default(FREE)
+  plan_valid_until   DateTime?
   accounts           Account[]
   bank_accounts      BankAccount[]
   sessions           Session[]
   bids               Bid[]
   disputes_initiated Dispute[]      @relation("Initiator")
   listings           Listing[]
+  reserved_listings  Listing[]      @relation("ReservedListings")
   sent_messages      Message[]      @relation("Sender")
   notifications      Notification[]
   payouts            Payout[]
@@ -131,37 +133,48 @@ model BankAccount {
 /// Listing: Digital items for sale
 /// Core product entity dengan support untuk fixed price dan auction
 model Listing {
-  listing_id      String         @id @default(uuid())
-  seller_id       String
-  title           String
-  description     String
-  price           Int
-  category_id     String
-  listing_type    ListingType    @default(FIXED)
-  status          ListingStatus  @default(DRAFT)
-  photo_urls      String[]
-  view_count      Int            @default(0)
-  created_at      DateTime       @default(now())
-  updated_at      DateTime       @updatedAt
-  starting_bid    Int?
-  current_bid     Int?
-  reserve_price   Int?
-  bid_increment   Int?           @default(5000)
-  buy_now_price   Int?
-  auction_ends_at DateTime?
-  auction_status  AuctionStatus?
-  bids            Bid[]
-  category        Category       @relation(fields: [category_id], references: [category_id])
-  seller          User           @relation(fields: [seller_id], references: [user_id])
-  transactions    Transaction[]
+  listing_id           String         @id @default(uuid())
+  seller_id            String
+  title                String
+  description          String
+  price                Int
+  category_id          String
+  listing_type         ListingType    @default(FIXED)
+  status               ListingStatus  @default(DRAFT)
+  photo_urls           String[]
+  view_count           Int            @default(0)
+  created_at           DateTime       @default(now())
+  updated_at           DateTime       @updatedAt
+  starting_bid         Int?
+  current_bid          Int?
+  reserve_price        Int?
+  bid_increment        Int?           @default(5000)
+  buy_now_price        Int?
+  auction_ends_at      DateTime?
+  auction_status       AuctionStatus?
+  reserved_for_user_id String?
+  reserved_until       DateTime?
+  is_private           Boolean        @default(false)
+  access_code          String?
+  bids                 Bid[]
+  category             Category       @relation(fields: [category_id], references: [category_id])
+  seller               User           @relation(fields: [seller_id], references: [user_id])
+  reserved_by          User?          @relation("ReservedListings", fields: [reserved_for_user_id], references: [user_id])
+  transactions         Transaction[]
+  
+  // Auto-Delivery Credentials
+  login_username       String?
+  login_password       String?
+  digital_file_url     String?
 
   @@index([seller_id])
   @@index([category_id])
   @@index([status])
   @@index([listing_type])
   @@index([created_at(sort: Desc)])
+  @@index([reserved_for_user_id])
   @@map("t_listings")
-  wishlists       Wishlist[]
+  wishlists            Wishlist[]
 }
 
 /// Bid: Auction bids - immutable append-only table
@@ -408,9 +421,10 @@ model SystemConfig {
 }
 
 enum UserRole {
-  BUYER
-  SELLER
+  BUYER  // @deprecated: Use USER instead
+  SELLER // @deprecated: Use USER instead
   ADMIN
+  USER   // Unified role for both buying and selling
 }
 
 enum UserTier {

@@ -5,6 +5,24 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
 
+/**
+ * Helper function to build reservation filter for listing queries
+ * Filters out listings reserved by other users
+ */
+function buildReservationFilter(userId?: string) {
+    return {
+        OR: [
+            // Not reserved
+            { reserved_for_user_id: null },
+            // Reserved but expired
+            { reserved_until: { lt: new Date() } },
+            // Reserved by current user (if authenticated)
+            ...(userId ? [{ reserved_for_user_id: userId }] : []),
+        ]
+    };
+}
+
+
 export const listingRouter = createTRPCRouter({
     getAll: publicProcedure
         .input(
@@ -22,9 +40,13 @@ export const listingRouter = createTRPCRouter({
         )
         .query(async ({ ctx, input }) => {
             const { limit, page, cursor, type, category, search, minPrice, maxPrice, sortBy } = input;
+            const userId = ctx.session?.user?.id;
 
             const where: any = {
                 status: ListingStatus.ACTIVE,
+                is_private: false, // Hide private listings from public search
+                // Filter out listings reserved by other users
+                AND: [buildReservationFilter(userId)],
             };
 
             if (type) {
@@ -109,7 +131,10 @@ export const listingRouter = createTRPCRouter({
 
 
     getById: publicProcedure
-        .input(z.object({ id: z.string() }))
+        .input(z.object({
+            id: z.string(),
+            accessCode: z.string().optional() // Add access code input
+        }))
         .query(async ({ ctx, input }) => {
             const listing = await ctx.db.listing.findUnique({
                 where: { listing_id: input.id },
@@ -151,10 +176,46 @@ export const listingRouter = createTRPCRouter({
 
             if (!listing) return null;
 
+            // Check Privacy
+            let isLocked = false;
+            if (listing.is_private) {
+                const isSeller = ctx.session?.user?.id === listing.seller_id;
+                const hasCorrectCode = input.accessCode && input.accessCode.toUpperCase() === listing.access_code;
+
+                if (!isSeller && !hasCorrectCode) {
+                    isLocked = true;
+                }
+            }
+
+            if (isLocked) {
+                // Return redacted listing
+                return {
+                    ...listing,
+                    title: "🔒 Private Listing",
+                    description: "This listing is private. Please enter the access code to view details.",
+                    price: 0,
+                    current_bid: 0,
+                    buy_now_price: 0,
+                    photo_urls: [],
+                    bids: [],
+                    isLocked: true, // Flag for frontend
+                    // Shield seller info? Maybe show name but hide details?
+                    // Let's keep seller visible so they know who to ask for code
+                    game: listing.category.name,
+                    bidCount: 0,
+                    seller: {
+                        ...listing.seller,
+                        joinedAt: listing.seller.created_at,
+                        rating: 0,
+                    },
+                };
+            }
+
             return {
                 ...listing,
                 game: listing.category.name,
                 bidCount: listing._count.bids,
+                isLocked: false,
                 seller: {
                     ...listing.seller,
                     joinedAt: listing.seller.created_at,
@@ -167,6 +228,27 @@ export const listingRouter = createTRPCRouter({
                     bidderJoinedAt: bid.bidder.created_at,
                 }))
             };
+        }),
+
+    getByAccessCode: publicProcedure
+        .input(z.object({ code: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const listing = await ctx.db.listing.findFirst({
+                where: {
+                    access_code: input.code.toUpperCase(),
+                    status: "ACTIVE"
+                },
+                select: { listing_id: true }
+            });
+
+            if (!listing) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Listing dengan kode tersebut tidak ditemukan",
+                });
+            }
+
+            return listing.listing_id;
         }),
 
     create: protectedProcedure
@@ -184,6 +266,12 @@ export const listingRouter = createTRPCRouter({
                 buy_now_price: z.number().optional(),
                 photos: z.array(z.string()).optional(),
                 status: z.enum(["DRAFT", "active", "ACTIVE", "PENDING"]).optional(), // Allow status input
+                is_private: z.boolean().default(false),
+
+                // Auto-Delivery
+                login_username: z.string().optional(),
+                login_password: z.string().optional(),
+                digital_file_url: z.string().url().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -214,6 +302,12 @@ export const listingRouter = createTRPCRouter({
                 finalCategoryId = category.category_id;
             }
 
+            // Generate access code if private
+            let accessCode: string | null = null;
+            if (input.is_private) {
+                // Simple 6-char random code
+                accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            }
 
             return ctx.db.listing.create({
                 data: {
@@ -230,6 +324,12 @@ export const listingRouter = createTRPCRouter({
                     auction_ends_at: input.auction_ends_at,
                     buy_now_price: input.buy_now_price,
                     photo_urls: input.photos,
+                    is_private: input.is_private,
+                    access_code: accessCode,
+                    // Auto-Delivery
+                    login_username: input.login_username,
+                    login_password: input.login_password,
+                    digital_file_url: input.digital_file_url,
                 },
             });
         }),
@@ -435,6 +535,20 @@ export const listingRouter = createTRPCRouter({
                 nextCursor = nextItem?.listing_id;
             }
 
+            // Get monthly listing count for quota check
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            const monthlyListingCount = await ctx.db.listing.count({
+                where: {
+                    seller_id: ctx.session.user.id,
+                    created_at: {
+                        gte: startOfMonth,
+                    },
+                },
+            });
+
             return {
                 listings: listings.map((l) => ({
                     ...l,
@@ -442,6 +556,7 @@ export const listingRouter = createTRPCRouter({
                     bidCount: l._count.bids,
                 })),
                 nextCursor,
+                monthlyListingCount,
             };
         }),
 
@@ -449,7 +564,11 @@ export const listingRouter = createTRPCRouter({
         .input(
             z.object({
                 fileName: z.string().min(1),
-                fileType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+                // Allow images + digital files
+                fileType: z.enum([
+                    "image/jpeg", "image/png", "image/webp",
+                    "application/pdf", "application/zip", "text/plain", "application/x-zip-compressed"
+                ]),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -486,7 +605,9 @@ export const listingRouter = createTRPCRouter({
                 });
             }
 
-            const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploads/${storagePath}`;
+            // Ensure no double slash if supabaseUrl ends with /
+            const baseUrl = supabaseUrl.replace(/\/$/, "");
+            const publicUrl = `${baseUrl}/storage/v1/object/public/uploads/${storagePath}`;
 
             return {
                 uploadUrl: data.signedUrl,
