@@ -5,6 +5,8 @@ import { api } from "@/trpc/react";
 import { useRouter } from "next/navigation";
 import { Check, Shield, Zap, Star } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 export default function PricingPage() {
     const { data: session, update } = useSession();
@@ -20,9 +22,18 @@ export default function PricingPage() {
         }
     });
 
-    const handleUpgrade = (tier: "FREE" | "PRO" | "ENTERPRISE") => {
-        if (confirm(`Are you sure you want to switch to ${tier} plan?`)) {
-            upgradeMutation.mutate({ tier });
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [selectedTier, setSelectedTier] = useState<"FREE" | "PRO" | "ENTERPRISE" | null>(null);
+
+    const handleUpgradeClick = (tier: "FREE" | "PRO" | "ENTERPRISE") => {
+        setSelectedTier(tier);
+        setShowConfirm(true);
+    };
+
+    const confirmUpgrade = () => {
+        if (selectedTier) {
+            upgradeMutation.mutate({ tier: selectedTier });
+            setShowConfirm(false);
         }
     };
 
@@ -99,10 +110,10 @@ export default function PricingPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.1 }}
                                 className={`relative rounded-3xl p-8 border ${isCurrent
-                                        ? "border-brand-primary ring-2 ring-brand-primary/20 bg-white dark:bg-zinc-900"
-                                        : isPro
-                                            ? "border-brand-primary/50 bg-gradient-to-b from-brand-primary/5 to-transparent dark:from-brand-primary/10"
-                                            : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                                    ? "border-brand-primary ring-2 ring-brand-primary/20 bg-white dark:bg-zinc-900"
+                                    : isPro
+                                        ? "border-brand-primary/50 bg-gradient-to-b from-brand-primary/5 to-transparent dark:from-brand-primary/10"
+                                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                                     }`}
                             >
                                 {isPro && (
@@ -134,13 +145,13 @@ export default function PricingPage() {
                                 </ul>
 
                                 <button
-                                    onClick={() => handleUpgrade(plan.name as any)}
+                                    onClick={() => handleUpgradeClick(plan.name as any)}
                                     disabled={isCurrent || upgradeMutation.isPending}
                                     className={`w-full py-3 rounded-xl font-medium transition-all ${isCurrent
-                                            ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-default"
-                                            : isPro
-                                                ? "bg-brand-primary text-white hover:bg-brand-primary-dark shadow-lg shadow-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/30"
-                                                : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                                        ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-default"
+                                        : isPro
+                                            ? "bg-brand-primary text-white hover:bg-brand-primary-dark shadow-lg shadow-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/30"
+                                            : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700"
                                         }`}
                                 >
                                     {isCurrent
@@ -155,6 +166,18 @@ export default function PricingPage() {
                     })}
                 </div>
             </div>
-        </div>
+
+            <ConfirmModal
+                isOpen={showConfirm}
+                onClose={() => setShowConfirm(false)}
+                onConfirm={confirmUpgrade}
+                title={`Upgrade ke Plan ${selectedTier}`}
+                description={`Apakah Anda yakin ingin mengganti plan langganan Anda ke ${selectedTier}? Perubahan ini akan segera berlaku.`}
+                confirmText="Ya, Upgrade"
+                cancelText="Batal"
+                variant="default"
+                isLoading={upgradeMutation.isPending}
+            />
+        </div >
     );
 }

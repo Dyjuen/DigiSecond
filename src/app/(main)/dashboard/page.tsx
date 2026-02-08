@@ -351,9 +351,18 @@ export default function DashboardPage() {
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-zinc-500">Listing Quota</span>
-                                    <span className="font-medium text-zinc-900 dark:text-white">
-                                        {user.tier === "FREE" ? `${userListings?.listings?.length || 0}/5` : "Unlimited"}
+                                    <span className="text-zinc-500">Listing Quota <span className="text-[10px] text-zinc-400 block sm:inline">(Bulan Ini)</span></span>
+                                    <span className="font-medium text-zinc-900 dark:text-white flex items-center gap-0.5">
+                                        {user.tier === "FREE" ? (
+                                            <>
+                                                <span className={userListings?.monthlyListingCount && userListings.monthlyListingCount >= 5 ? "text-red-500" : "text-zinc-900 dark:text-white"}>
+                                                    {userListings?.monthlyListingCount || 0}
+                                                </span>
+                                                <span className="text-zinc-400">/5</span>
+                                            </>
+                                        ) : (
+                                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-purple-500 font-bold">Unlimited</span>
+                                        )}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
@@ -376,22 +385,34 @@ export default function DashboardPage() {
                                 </button>
                             </Link>
                         </div>
+
                         {/* Upgrade Banner */}
                         {user.tier === 'FREE' && (
-                            <GlowCard className="!p-6 bg-gradient-to-br from-purple-500/10 to-indigo-500/5 dark:bg-zinc-900/40" glowColor="purple" customSize>
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500">
-                                        <TrendingUp className="w-6 h-6" />
+                            <GlowCard className="!p-0 bg-gradient-to-br from-purple-500/10 to-indigo-500/5 dark:bg-zinc-900/40 border-purple-500/20 overflow-hidden" glowColor="purple" customSize>
+                                <div className="p-5 flex flex-col gap-4">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
+                                                <TrendingUp className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-zinc-900 dark:text-white text-sm">Upgrade to Pro</h3>
+                                                <p className="text-xs text-zinc-500">Unlock more features</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-bold bg-orange-500 text-white px-2 py-0.5 rounded-full shadow-sm shadow-orange-500/20">PRO</span>
                                     </div>
-                                    <span className="text-xs font-bold bg-orange-500 text-white px-2 py-1 rounded">PRO</span>
+
+                                    <p className="text-xs text-zinc-500 leading-relaxed dark:text-zinc-400">
+                                        Dapatkan <span className="text-zinc-900 dark:text-white font-medium">unlimited listing</span>, fee transaksi lebih rendah, dan akses fitur analitik lengkap.
+                                    </p>
+
+                                    <Link href="/dashboard/pricing" className="w-full">
+                                        <button className="w-full py-2.5 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-red-500 rounded-xl hover:shadow-lg hover:shadow-orange-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+                                            Upgrade Sekarang
+                                        </button>
+                                    </Link>
                                 </div>
-                                <h3 className="font-bold text-zinc-900 dark:text-white mb-1">Upgrade to Pro</h3>
-                                <p className="text-sm text-zinc-500 mb-4">Get unlimited listings and lower fees.</p>
-                                <Link href="/dashboard/pricing">
-                                    <button className="w-full py-2.5 text-sm font-bold text-orange-600 bg-orange-500/10 rounded-xl hover:bg-orange-500 hover:text-white transition-all">
-                                        Upgrade Now
-                                    </button>
-                                </Link>
                             </GlowCard>
                         )}
                     </div>
