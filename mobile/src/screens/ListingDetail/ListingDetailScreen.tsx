@@ -7,14 +7,6 @@ import { Skeleton } from "../../components/Skeleton";
 import { shadows } from "../../lib/theme";
 import { api } from "../../lib/api";
 import PaymentSheet from "../../components/PaymentSheet";
-import PaymentInstructionsSheet from "../../components/PaymentInstructionsSheet";
-
-type PaymentInfo = {
-    invoiceUrl: string;
-    transactionId: string;
-    expiresAt: Date;
-    paymentMethod: "VA" | "EWALLET" | "QRIS";
-} | null;
 
 export default function ListingDetailScreen() {
     const router = useRouter();
@@ -23,10 +15,6 @@ export default function ListingDetailScreen() {
 
     // Sheet visibility states
     const [isPaymentSheetVisible, setPaymentSheetVisible] = useState(false);
-    const [isPaymentInstructionsVisible, setPaymentInstructionsVisible] = useState(false);
-    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"VA" | "EWALLET" | "QRIS">("VA");
-    const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>(null);
-    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     // Fetch listing from API
     const { data: listing, isLoading, error } = api.listing.getById.useQuery(
@@ -48,9 +36,6 @@ export default function ListingDetailScreen() {
         }
     });
 
-    const createTransaction = api.transaction.create.useMutation();
-    const createPayment = api.payment.create.useMutation();
-
     const isOwner = session?.user?.id === listing?.seller_id;
 
     const handleDelete = () => {
@@ -70,61 +55,6 @@ export default function ListingDetailScreen() {
 
     const handleEdit = () => {
         router.push({ pathname: "/listing/edit/[id]", params: { id: id as string } });
-    };
-
-
-    const handlePurchaseConfirm = async (method: "VA" | "EWALLET" | "QRIS") => {
-        try {
-            setIsProcessingPayment(true);
-            setSelectedPaymentMethod(method);
-
-            // 1. Create Transaction
-            const transaction = await createTransaction.mutateAsync({
-                listing_id: id as string,
-                payment_method: method
-            });
-
-            // 2. Create Payment (Invoice)
-            const redirectUrl = Linking.createURL("payment-result");
-            console.log("Redirect URL:", redirectUrl); // Debugging
-
-            const payment = await createPayment.mutateAsync({
-                transaction_id: transaction.transaction_id,
-                redirect_url: redirectUrl
-            });
-
-            // 3. Set Info and Show Instructions
-            setPaymentInfo({
-                invoiceUrl: payment.invoice_url,
-                transactionId: transaction.transaction_id,
-                expiresAt: payment.expires_at,
-                paymentMethod: method
-            });
-
-            setPaymentSheetVisible(false);
-            setTimeout(() => setPaymentInstructionsVisible(true), 400);
-
-        } catch (err: any) {
-            Alert.alert("Transaction Failed", err.message || "Something went wrong");
-        } finally {
-            setIsProcessingPayment(false);
-        }
-    };
-
-    const handlePaymentComplete = () => {
-        setPaymentInstructionsVisible(false);
-        // In real app: Navigate to specific chat ID
-        // For prototype: Go to chats tab
-        Alert.alert(
-            "Success",
-            "Payment confirmed! Redirecting to chat...",
-            [
-                {
-                    text: "OK",
-                    onPress: () => router.push("/(tabs)/chat")
-                }
-            ]
-        );
     };
 
     if (isLoading) {
@@ -264,21 +194,13 @@ export default function ListingDetailScreen() {
                     id: listing.listing_id,
                     title: listing.title,
                     price: listing.price,
-                    sellerName: listing.seller.name || "Seller"
+                    sellerName: listing.seller.name || "Seller",
+                    imageUrl: listing.photo_urls[0] // Pass image if available
                 }}
-                onConfirm={handlePurchaseConfirm}
-                isLoading={isProcessingPayment}
-            />
-
-            <PaymentInstructionsSheet
-                visible={isPaymentInstructionsVisible}
-                onDismiss={() => setPaymentInstructionsVisible(false)}
-                amount={listing.price}
-                paymentMethod={selectedPaymentMethod}
-                onPaymentComplete={handlePaymentComplete}
-                invoiceUrl={paymentInfo?.invoiceUrl}
-                transactionId={paymentInfo?.transactionId}
-                expiresAt={paymentInfo?.expiresAt}
+                onSuccess={() => {
+                    // PaymentSheet handles navigation to success, but we can do extra cleanup if needed
+                    // or just let the sheet close itself/navigate
+                }}
             />
         </View>
     );
