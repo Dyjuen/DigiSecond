@@ -46,7 +46,13 @@ export default function MyListingsScreen() {
                                 title={item.title}
                                 price={item.price}
                                 imageUrl={item.photo_urls?.[0] || "https://via.placeholder.com/400x300?text=No+Image"}
-                                onPress={() => router.push(`/listing/${item.listing_id}`)}
+                                onPress={() => {
+                                    if (item.listing_type === 'AUCTION') {
+                                        router.push(`/auction/${item.listing_id}`);
+                                    } else {
+                                        router.push(`/listing/${item.listing_id}`);
+                                    }
+                                }}
                                 style={{ width: 160 }}
                             />
                         </View>

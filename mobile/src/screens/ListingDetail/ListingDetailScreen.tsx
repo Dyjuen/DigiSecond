@@ -7,6 +7,7 @@ import { Skeleton } from "../../components/Skeleton";
 import { shadows } from "../../lib/theme";
 import { api } from "../../lib/api";
 import PaymentSheet from "../../components/PaymentSheet";
+import { SellerCard } from "../../components/SellerCard";
 
 export default function ListingDetailScreen() {
     const router = useRouter();
@@ -28,7 +29,7 @@ export default function ListingDetailScreen() {
     const deleteMutation = api.listing.delete.useMutation({
         onSuccess: () => {
             utils.listing.getByUser.invalidate();
-            router.replace("/(tabs)/");
+            router.replace("/");
             Alert.alert("Deleted", "Listing has been removed");
         },
         onError: (err) => {
@@ -111,28 +112,12 @@ export default function ListingDetailScreen() {
                         {formattedPrice}
                     </Text>
 
-                    <Card style={[styles.sellerCard, shadows.shadowCard]}>
-                        <Card.Content style={styles.sellerContent}>
-                            <Avatar.Text
-                                size={40}
-                                label={listing.seller.name.charAt(0).toUpperCase()}
-                                style={{ backgroundColor: theme.colors.secondaryContainer }}
-                            />
-                            <View style={styles.sellerInfo}>
-                                <Text variant="titleMedium">{listing.seller.name}</Text>
-                                <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
-                                    {listing.seller.is_verified ? "Verified Seller" : "Seller"}
-                                </Text>
-                            </View>
-                            <Button
-                                mode="text"
-                                style={{ marginLeft: "auto" }}
-                                onPress={() => router.push({ pathname: "/seller/[id]", params: { id: listing.seller_id } })}
-                            >
-                                View
-                            </Button>
-                        </Card.Content>
-                    </Card>
+                    <SellerCard
+                        sellerId={listing.seller_id}
+                        sellerName={listing.seller.name}
+                        isVerified={listing.seller.is_verified}
+                        style={styles.sellerCard}
+                    />
 
                     <Divider style={styles.divider} />
 

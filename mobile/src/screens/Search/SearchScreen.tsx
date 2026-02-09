@@ -240,7 +240,13 @@ export default function SearchScreen() {
                             title={item.title}
                             price={item.price}
                             imageUrl={'https://via.placeholder.com/400x300'}
-                            onPress={() => router.push(`/listing/${item.listing_id}`)}
+                            onPress={() => {
+                                if (item.listing_type === 'AUCTION') {
+                                    router.push(`/auction/${item.listing_id}`);
+                                } else {
+                                    router.push(`/listing/${item.listing_id}`);
+                                }
+                            }}
                             style={styles.card}
                         />
                     )}

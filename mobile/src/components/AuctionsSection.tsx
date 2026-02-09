@@ -5,8 +5,12 @@ import { AuctionCard } from "./AuctionCard";
 import { api } from "../lib/api";
 import { useAuctionCountdown } from "../hooks/useAuctionCountdown";
 
+import { useRouter } from "expo-router";
+
 // Separate component to use hook per auction
 function AuctionItem({ auction }: { auction: any }) {
+    const theme = useTheme();
+    const router = useRouter();
     const { timeLeft, isUrgent } = useAuctionCountdown(auction.auction_ends_at);
 
     return (
@@ -16,7 +20,7 @@ function AuctionItem({ auction }: { auction: any }) {
             currentBid={auction.current_bid || auction.price}
             timeLeft={timeLeft}
             imageUrl="https://via.placeholder.com/400x300"
-            onPress={() => console.log(`Pressed Auction ${auction.listing_id}`)}
+            onPress={() => router.push(`/auction/${auction.listing_id}`)}
             isUrgent={isUrgent}
         />
     );

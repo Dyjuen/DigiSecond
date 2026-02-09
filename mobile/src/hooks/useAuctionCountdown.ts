@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 /**
  * Hook to calculate and update auction countdown timer
  * @param endDate - Auction end date (can be Date, string, null, or undefined)
- * @returns Object with timeLeft string, isExpired and isUrgent flags
+ * @returns Object with timeLeft string, isExpired and isUrgent flags, and atomic time units
  */
 export function useAuctionCountdown(endDate: Date | string | null | undefined) {
     const [timeLeft, setTimeLeft] = useState<string>("--:--:--");
+    const [timeParts, setTimeParts] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const [isExpired, setIsExpired] = useState(false);
     const [isUrgent, setIsUrgent] = useState(false);
 
@@ -14,6 +15,7 @@ export function useAuctionCountdown(endDate: Date | string | null | undefined) {
         // Handle null/undefined
         if (!endDate) {
             setTimeLeft("--:--:--");
+            setTimeParts({ days: 0, hours: 0, minutes: 0, seconds: 0 });
             setIsExpired(false);
             setIsUrgent(false);
             return;
@@ -26,6 +28,7 @@ export function useAuctionCountdown(endDate: Date | string | null | undefined) {
                 // Check for invalid date
                 if (isNaN(end)) {
                     setTimeLeft("--:--:--");
+                    setTimeParts({ days: 0, hours: 0, minutes: 0, seconds: 0 });
                     setIsExpired(false);
                     setIsUrgent(false);
                     return;
@@ -37,6 +40,7 @@ export function useAuctionCountdown(endDate: Date | string | null | undefined) {
                 // Expired
                 if (diff <= 0) {
                     setTimeLeft("Berakhir");
+                    setTimeParts({ days: 0, hours: 0, minutes: 0, seconds: 0 });
                     setIsExpired(true);
                     setIsUrgent(false);
                     return;
@@ -63,11 +67,13 @@ export function useAuctionCountdown(endDate: Date | string | null | undefined) {
                     formatted = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 }
 
+                setTimeParts({ days, hours, minutes, seconds });
                 setTimeLeft(formatted);
             } catch (error) {
                 // Catch any date parsing errors
                 console.error("Error calculating countdown:", error);
                 setTimeLeft("--:--:--");
+                setTimeParts({ days: 0, hours: 0, minutes: 0, seconds: 0 });
                 setIsExpired(false);
                 setIsUrgent(false);
             }
@@ -83,5 +89,5 @@ export function useAuctionCountdown(endDate: Date | string | null | undefined) {
         return () => clearInterval(interval);
     }, [endDate]);
 
-    return { timeLeft, isExpired, isUrgent };
+    return { timeLeft, isExpired, isUrgent, ...timeParts };
 }
