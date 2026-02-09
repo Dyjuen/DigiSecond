@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -16,9 +16,10 @@ export type TransactionStatus =
 interface Props {
     status: TransactionStatus;
     verificationDeadline?: string | null;
+    style?: ViewStyle;
 }
 
-export const TransactionProgressBar = ({ status, verificationDeadline }: Props) => {
+export const TransactionProgressBar = ({ status, verificationDeadline, style }: Props) => {
     const theme = useTheme();
 
     // Define steps for digital goods
@@ -59,7 +60,7 @@ export const TransactionProgressBar = ({ status, verificationDeadline }: Props) 
 
     if (isDisputed) {
         return (
-            <View style={[styles.container, { backgroundColor: theme.colors.errorContainer }]}>
+            <View style={[styles.container, { backgroundColor: theme.colors.errorContainer }, style]}>
                 <View style={styles.header}>
                     <MaterialCommunityIcons name="alert-circle" size={24} color={theme.colors.error} />
                     <Text variant="titleMedium" style={{ color: theme.colors.error, marginLeft: 8 }}>
@@ -75,7 +76,7 @@ export const TransactionProgressBar = ({ status, verificationDeadline }: Props) 
 
     if (isCancelled) {
         return (
-            <View style={[styles.container, { backgroundColor: theme.colors.surfaceVariant }]}>
+            <View style={[styles.container, { backgroundColor: theme.colors.surfaceVariant }, style]}>
                 <View style={styles.header}>
                     <MaterialCommunityIcons name="close-circle" size={24} color={theme.colors.onSurfaceVariant} />
                     <Text variant="titleMedium" style={{ marginLeft: 8 }}>
@@ -89,7 +90,7 @@ export const TransactionProgressBar = ({ status, verificationDeadline }: Props) 
 
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.surface }, style]}>
             <View style={styles.stepsContainer}>
                 {steps.map((step, index) => {
                     const isActive = index === activeStep;

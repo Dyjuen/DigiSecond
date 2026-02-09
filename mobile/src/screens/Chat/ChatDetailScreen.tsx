@@ -7,10 +7,15 @@ import {
     Platform,
     Image,
     Alert,
+    LayoutAnimation,
+    UIManager,
+    TouchableOpacity,
+    Animated,
+    Easing,
     ActivityIndicator,
     TextInput as NativeTextInput
 } from "react-native";
-import { Text, IconButton, useTheme, Menu, Button } from "react-native-paper";
+import { Text, IconButton, useTheme, Menu, Button, Surface } from "react-native-paper";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -35,18 +40,38 @@ export default function ChatDetailScreenV2() {
     const userId = useAuthStore((state) => state.user?.id);
     const [inputText, setInputText] = useState("");
     const [menuVisible, setMenuVisible] = useState(false);
+    const [expanded, setExpanded] = useState(false); // Collapsed by default
+    const animationController = React.useRef(new Animated.Value(0)).current;
+
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const utils = api.useUtils();
+
+    const toggleExpand = () => {
+        const config = {
+            duration: 300,
+            toValue: expanded ? 0 : 1,
+            useNativeDriver: true
+        };
+        Animated.timing(animationController, config).start();
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExpanded(!expanded);
+    };
+
+    const arrowRotation = animationController.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '180deg']
+    });
 
     // Fetch full transaction details
     const { data: transaction, isLoading: isTransactionLoading, refetch: refetchTransaction } = api.transaction.getById.useQuery(
         { transaction_id: id },
         {
             enabled: !!id,
-            refetchInterval: (data) => {
+            refetchInterval: (query) => {
+                const data = query.state.data;
                 if (!data) return 5000;
-                return ["COMPLETED", "CANCELLED", "REFUNDED"].includes(data.status) ? false : 3000;
+                return ["COMPLETED", "CANCELLED", "REFUNDED"].includes(data.status as string) ? false : 3000;
             }
         }
     );
@@ -54,6 +79,12 @@ export default function ChatDetailScreenV2() {
     // Determines if we should show legitimate status or fallback to mock
     const currentStatus = transaction?.status || (mockStatus as TransactionStatus);
     const isBuyer = userId === transaction?.buyer_id;
+
+    // Fetch review status
+    const { data: reviewStatus } = api.review.getByTransaction.useQuery(
+        { transaction_id: id },
+        { enabled: !!id && currentStatus === 'COMPLETED' }
+    );
 
     // Queries
     const {
@@ -270,22 +301,70 @@ export default function ChatDetailScreenV2() {
             {/* Header & Progress Bar Area */}
             <View>
                 {transaction && (
-                    <View style={{ backgroundColor: theme.colors.surface }}>
-                        {/* Item Info Summary */}
-                        <View style={[styles.itemSummary, { borderBottomColor: theme.colors.outlineVariant, borderBottomWidth: 1 }]}>
-                            <Text variant="titleSmall">{transaction.listing.title}</Text>
-                            <Text variant="bodyMedium" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
-                                IDR {transaction.transaction_amount.toLocaleString()}
-                            </Text>
-                        </View>
+                    <Surface style={{ margin: 16, borderRadius: 12, elevation: 2, backgroundColor: theme.colors.surface, overflow: 'hidden' }}>
+                        <TouchableOpacity onPress={toggleExpand} activeOpacity={0.8}>
+                            {/* Progress Bar (Always Visible) */}
+                            <TransactionProgressBar
+                                status={currentStatus as TransactionStatus}
+                                verificationDeadline={transaction.verification_deadline?.toString()}
+                                style={{ borderBottomWidth: 0, paddingBottom: 4 }}
+                            />
+                            <Animated.View style={{ transform: [{ rotate: arrowRotation }], alignSelf: 'center' }}>
+                                <IconButton
+                                    icon="chevron-down"
+                                    size={20}
+                                    style={{ margin: 0, height: 20 }}
+                                    iconColor={theme.colors.onSurfaceVariant}
+                                />
+                            </Animated.View>
+                        </TouchableOpacity>
 
-                        {/* Progress Bar */}
-                        <TransactionProgressBar
-                            status={currentStatus as TransactionStatus}
-                            verificationDeadline={transaction.verification_deadline?.toString()}
-                        />
-                    </View>
+                        {expanded && (
+                            <View>
+                                {/* Item Info Summary */}
+                                <View style={[styles.itemSummary]}>
+                                    <Text variant="titleSmall">{transaction.listing.title}</Text>
+                                    <Text variant="bodyMedium" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
+                                        IDR {transaction.transaction_amount.toLocaleString()}
+                                    </Text>
+                                </View>
+
+                                {/* Review Button for Completed Transactions */}
+                                {currentStatus === 'COMPLETED' && (
+                                    <View style={styles.actionContainer}>
+                                        {reviewStatus?.hasReviewed ? (
+                                            <Button
+                                                mode="outlined"
+                                                disabled
+                                                icon="check"
+                                                style={{ width: '100%', borderColor: theme.colors.primary }}
+                                                textColor={theme.colors.primary}
+                                            >
+                                                Review Terkirim
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                mode="contained"
+                                                icon="star"
+                                                buttonColor={theme.colors.primary}
+                                                textColor={theme.colors.onPrimary}
+                                                style={{ width: '100%' }}
+                                                onPress={() => router.push({
+                                                    pathname: "/review/create",
+                                                    params: { transactionId: id }
+                                                } as any)}
+                                            >
+                                                Beri Review
+                                            </Button>
+                                        )}
+                                    </View>
+                                )}
+                            </View>
+                        )}
+                    </Surface>
                 )}
+
+
 
                 {/* Dispute / Action Buttons */}
                 {transaction && currentStatus === 'ITEM_TRANSFERRED' && isBuyer && !transaction.dispute && (
