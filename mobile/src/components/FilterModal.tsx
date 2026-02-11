@@ -18,6 +18,12 @@ const SORT_OPTIONS = [
     { label: "Harga: Tinggi ke Rendah", value: "price_desc" },
 ];
 
+const TYPE_OPTIONS = [
+    { label: "Semua", value: "all" },
+    { label: "Listing", value: "FIXED" },
+    { label: "Lelang", value: "AUCTION" },
+];
+
 export function FilterModal({ visible, onDismiss, currentFilters, onApply, onReset }: FilterModalProps) {
     const theme = useTheme();
 
@@ -26,13 +32,15 @@ export function FilterModal({ visible, onDismiss, currentFilters, onApply, onRes
     const [minPrice, setMinPrice] = useState<string>(currentFilters.minPrice ? String(currentFilters.minPrice) : '');
     const [maxPrice, setMaxPrice] = useState<string>(currentFilters.maxPrice ? String(currentFilters.maxPrice) : '');
     const [sortBy, setSortBy] = useState<string>(currentFilters.sortBy || 'newest');
+    const [type, setType] = useState<string>(currentFilters.type || 'all');
 
     const handleApply = () => {
         onApply({
             category: categories.length > 0 ? categories : undefined,
             minPrice: minPrice ? Number(minPrice) : undefined,
             maxPrice: maxPrice ? Number(maxPrice) : undefined,
-            sortBy: sortBy as any
+            sortBy: sortBy as any,
+            type: type === 'all' ? undefined : (type as 'FIXED' | 'AUCTION')
         });
         onDismiss();
     };
@@ -42,6 +50,7 @@ export function FilterModal({ visible, onDismiss, currentFilters, onApply, onRes
         setMinPrice('');
         setMaxPrice('');
         setSortBy('newest');
+        setType('all');
         onReset();
         // onDismiss(); // Optional: keep open or close on reset? Let's keep it open or let user close
     };
@@ -53,6 +62,7 @@ export function FilterModal({ visible, onDismiss, currentFilters, onApply, onRes
             setMinPrice(currentFilters.minPrice ? String(currentFilters.minPrice) : '');
             setMaxPrice(currentFilters.maxPrice ? String(currentFilters.maxPrice) : '');
             setSortBy(currentFilters.sortBy || 'newest');
+            setType(currentFilters.type || 'all');
         }
     }, [visible, currentFilters]);
 
@@ -73,6 +83,24 @@ export function FilterModal({ visible, onDismiss, currentFilters, onApply, onRes
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContent}>
+                    {/* Type Filter - Listed First */}
+                    <Text variant="titleMedium" style={styles.sectionTitle}>Tipe Listing</Text>
+                    <View style={styles.chipContainer}>
+                        {TYPE_OPTIONS.map((opt) => (
+                            <Chip
+                                key={opt.value}
+                                selected={type === opt.value}
+                                onPress={() => setType(opt.value)}
+                                style={styles.chip}
+                                showSelectedOverlay
+                            >
+                                {opt.label}
+                            </Chip>
+                        ))}
+                    </View>
+
+                    <Divider style={styles.divider} />
+
                     {/* Categories */}
                     <Text variant="titleMedium" style={styles.sectionTitle}>Kategori</Text>
                     <View style={styles.chipContainer}>

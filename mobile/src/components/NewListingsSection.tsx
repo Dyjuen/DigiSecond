@@ -24,7 +24,7 @@ export function NewListingsSection() {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>Listing Terbaru</Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/search?type=FIXED')}>
                     <Text variant="labelMedium" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Lihat Semua</Text>
                 </TouchableOpacity>
             </View>

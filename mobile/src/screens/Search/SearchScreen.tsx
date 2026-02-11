@@ -15,7 +15,7 @@ import { useHaptic } from '../../hooks/useHaptic';
 export default function SearchScreen() {
     const theme = useTheme();
     const router = useRouter();
-    const params = useLocalSearchParams();
+    const { category, query, type } = useLocalSearchParams<{ category?: string, query?: string, type?: string }>();
     const haptics = useHaptic();
 
     // UI State
@@ -26,16 +26,27 @@ export default function SearchScreen() {
 
     // Initial load from params (if navigated from category)
     useEffect(() => {
-        if (params.category) {
-            // Ensure array
-            setFilters(prev => ({ ...prev, category: [params.category as string] }));
+        if (category) {
+            setFilters(prev => {
+                if (prev.category?.[0] === category && prev.category.length === 1) return prev;
+                return { ...prev, category: [category] };
+            });
         }
-        if (params.query) {
-            const q = params.query as string;
-            setSearchQuery(q);
-            setDebouncedSearchQuery(q);
+        if (type) {
+            const t = type as 'FIXED' | 'AUCTION';
+            setFilters(prev => {
+                if (prev.type === t) return prev;
+                return { ...prev, type: t };
+            });
         }
-    }, [params]);
+        if (query) {
+            setSearchQuery(prev => {
+                if (prev === query) return prev;
+                return query;
+            });
+            setDebouncedSearchQuery(prev => prev === query ? prev : query);
+        }
+    }, [category, query, type]);
 
     // Debounce Search Query
     useEffect(() => {
@@ -55,6 +66,7 @@ export default function SearchScreen() {
         minPrice: filters.minPrice,
         maxPrice: filters.maxPrice,
         sortBy: filters.sortBy || 'newest',
+        type: filters.type,
         limit: 50,
         page: 1,
     });
@@ -65,6 +77,7 @@ export default function SearchScreen() {
         if (filters.category && filters.category.length > 0) count += filters.category.length;
         if (filters.minPrice !== undefined) count++;
         if (filters.maxPrice !== undefined) count++;
+        if (filters.type) count++;
         if (filters.sortBy && filters.sortBy !== 'newest') count++;
         return count;
     }, [filters]);
@@ -116,7 +129,7 @@ export default function SearchScreen() {
                 <FlatList
                     horizontal
                     data={useMemo(() => {
-                        const items: { key: string; label: string; type: 'category' | 'sort' | 'price' | 'other'; value?: any }[] = [];
+                        const items: { key: string; label: string; type: 'category' | 'sort' | 'price' | 'type' | 'other'; value?: any }[] = [];
                         const { minPrice, maxPrice, category, sortBy, ...others } = filters;
 
                         // 1. Categories
@@ -165,6 +178,15 @@ export default function SearchScreen() {
                             });
                         }
 
+                        // 4. Listing Type
+                        if (filters.type) {
+                            items.push({
+                                key: 'type',
+                                label: filters.type === 'AUCTION' ? 'Lelang' : 'Listing',
+                                type: 'type'
+                            });
+                        }
+
                         return items;
                     }, [filters])}
                     keyExtractor={(item) => item.key}
@@ -183,6 +205,8 @@ export default function SearchScreen() {
                                         if (next.category?.length === 0) delete next.category;
                                     } else if (item.type === 'sort') {
                                         delete next.sortBy;
+                                    } else if (item.type === 'type') {
+                                        delete next.type;
                                     } else if (item.type === 'price') {
                                         if (item.key === 'priceRange') {
                                             delete next.minPrice;

@@ -28,6 +28,7 @@ function AuctionItem({ auction }: { auction: any }) {
 
 export function AuctionsSection() {
     const theme = useTheme();
+    const router = useRouter();
 
     // Fetch auction listings from API
     const { data, isLoading } = api.listing.getAll.useQuery({
@@ -43,7 +44,7 @@ export function AuctionsSection() {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>Lelang Langsung</Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/search?type=AUCTION')}>
                     <Text variant="labelMedium" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Lihat Semua</Text>
                 </TouchableOpacity>
             </View>

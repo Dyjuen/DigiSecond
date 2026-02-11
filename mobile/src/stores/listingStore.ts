@@ -16,6 +16,7 @@ export interface FilterOptions {
     minPrice?: number;
     maxPrice?: number;
     sortBy?: 'newest' | 'price_asc' | 'price_desc';
+    type?: 'FIXED' | 'AUCTION';
 }
 
 export const CURRENT_USER_ID = "user_me";
@@ -103,6 +104,11 @@ export const useListingStore = create<ListingState>((set, get) => ({
                 l.description.toLowerCase().includes(lowerQuery)
             );
         }
+
+        // 1.5 Type Filter (Mock) - verify if mock listings have type property or if we need to add it
+        // The mock data currently doesn't have `listing_type` or `type`, so this is just for interface completeness
+        // In real app, API handles this.
+
 
         // 2. Category Filter
         if (filters.category && filters.category.length > 0) {
