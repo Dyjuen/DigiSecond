@@ -4,7 +4,7 @@ import { FilterModal } from '../FilterModal';
 import { Provider as PaperProvider } from 'react-native-paper';
 
 // Mock dependencies
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+jest.mock('react-native/src/private/animated/NativeAnimatedHelper');
 
 describe('FilterModal', () => {
     const mockOnApply = jest.fn();

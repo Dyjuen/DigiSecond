@@ -7,13 +7,11 @@ import {
     Platform,
     Image,
     Alert,
-    LayoutAnimation,
-    UIManager,
     TouchableOpacity,
-    Animated,
-    Easing,
     ActivityIndicator,
-    TextInput as NativeTextInput
+    TextInput as NativeTextInput,
+    Animated,
+    Easing
 } from "react-native";
 import { Text, IconButton, useTheme, Menu, Button, Surface } from "react-native-paper";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
@@ -40,28 +38,39 @@ export default function ChatDetailScreenV2() {
     const userId = useAuthStore((state) => state.user?.id);
     const [inputText, setInputText] = useState("");
     const [menuVisible, setMenuVisible] = useState(false);
-    const [expanded, setExpanded] = useState(false); // Collapsed by default
-    const animationController = React.useRef(new Animated.Value(0)).current;
+    const [expanded, setExpanded] = useState(false);
+    const expandAnim = React.useRef(new Animated.Value(0)).current;
+    const [contentHeight, setContentHeight] = useState(0);
 
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const utils = api.useUtils();
 
     const toggleExpand = () => {
-        const config = {
+        const toValue = expanded ? 0 : 1;
+        Animated.timing(expandAnim, {
+            toValue,
             duration: 300,
-            toValue: expanded ? 0 : 1,
-            useNativeDriver: true
-        };
-        Animated.timing(animationController, config).start();
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            useNativeDriver: false, // Height cannot use native driver
+        }).start();
         setExpanded(!expanded);
     };
 
-    const arrowRotation = animationController.interpolate({
+    const arrowRotation = expandAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: ['0deg', '180deg']
+        outputRange: ["0deg", "180deg"],
     });
+
+    const animatedHeightStyle = {
+        height: expandAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, contentHeight || 100],
+        }),
+        opacity: expandAnim.interpolate({
+            inputRange: [0, 0.5, 1],
+            outputRange: [0, 0, 1],
+        }),
+    };
 
     // Fetch full transaction details
     const { data: transaction, isLoading: isTransactionLoading, refetch: refetchTransaction } = api.transaction.getById.useQuery(
@@ -218,53 +227,7 @@ export default function ChatDetailScreenV2() {
     };
 
     const renderMessage = ({ item }: { item: Message }) => (
-        <View
-            style={[
-                styles.messageBubble,
-                item.sentByMe ? styles.sentBubble : styles.receivedBubble,
-                {
-                    backgroundColor: item.sentByMe
-                        ? theme.colors.primary
-                        : theme.colors.surfaceVariant,
-                },
-            ]}
-        >
-            {item.image && (
-                <Image
-                    source={{ uri: item.image }}
-                    style={styles.messageImage}
-                    resizeMode="cover"
-                    accessibilityLabel="Message attachment"
-                />
-            )}
-            {item.text && (
-                <Text
-                    style={[
-                        styles.messageText,
-                        {
-                            color: item.sentByMe
-                                ? theme.colors.onPrimary
-                                : theme.colors.onSurfaceVariant,
-                        },
-                    ]}
-                >
-                    {item.text}
-                </Text>
-            )}
-            <Text
-                style={[
-                    styles.timestamp,
-                    {
-                        color: item.sentByMe
-                            ? theme.colors.onPrimary
-                            : theme.colors.onSurfaceVariant,
-                        opacity: 0.7,
-                    },
-                ]}
-            >
-                {item.timestamp}
-            </Text>
-        </View>
+        <MessageBubble item={item} theme={theme} />
     );
 
     return (
@@ -319,8 +282,16 @@ export default function ChatDetailScreenV2() {
                             </Animated.View>
                         </TouchableOpacity>
 
-                        {expanded && (
-                            <View>
+                        <Animated.View style={[{ overflow: 'hidden' }, animatedHeightStyle]}>
+                            <View
+                                onLayout={(e) => {
+                                    const height = e.nativeEvent.layout.height;
+                                    if (height > 0 && height !== contentHeight) {
+                                        setContentHeight(height);
+                                    }
+                                }}
+                                style={{ position: 'absolute', width: '100%', top: 0 }}
+                            >
                                 {/* Item Info Summary */}
                                 <View style={[styles.itemSummary]}>
                                     <Text variant="titleSmall">{transaction.listing.title}</Text>
@@ -360,7 +331,7 @@ export default function ChatDetailScreenV2() {
                                     </View>
                                 )}
                             </View>
-                        )}
+                        </Animated.View>
                     </Surface>
                 )}
 
@@ -566,3 +537,70 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     }
 });
+
+const MessageBubble = ({ item, theme }: { item: Message; theme: any }) => {
+    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+    const slideAnim = React.useRef(new Animated.Value(20)).current;
+
+    React.useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 300,
+                easing: Easing.out(Easing.back(1.5)),
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, []);
+
+    return (
+        <Animated.View
+            style={[
+                styles.messageBubble,
+                item.sentByMe ? styles.sentBubble : styles.receivedBubble,
+                {
+                    backgroundColor: item.sentByMe ? theme.colors.primary : theme.colors.surfaceVariant,
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }],
+                },
+            ]}
+        >
+            {item.image && (
+                <Image
+                    source={{ uri: item.image }}
+                    style={styles.messageImage}
+                    resizeMode="cover"
+                    accessibilityLabel="Message attachment"
+                />
+            )}
+            {item.text && (
+                <Text
+                    style={[
+                        styles.messageText,
+                        {
+                            color: item.sentByMe ? theme.colors.onPrimary : theme.colors.onSurfaceVariant,
+                        },
+                    ]}
+                >
+                    {item.text}
+                </Text>
+            )}
+            <Text
+                style={[
+                    styles.timestamp,
+                    {
+                        color: item.sentByMe ? theme.colors.onPrimary : theme.colors.onSurfaceVariant,
+                        opacity: 0.7,
+                    },
+                ]}
+            >
+                {item.timestamp}
+            </Text>
+        </Animated.View>
+    );
+};

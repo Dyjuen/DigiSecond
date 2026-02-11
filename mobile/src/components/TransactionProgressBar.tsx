@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, Animated } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -96,39 +96,22 @@ export const TransactionProgressBar = ({ status, verificationDeadline, style }: 
                     const isActive = index === activeStep;
                     const isCompleted = index < activeStep;
 
-                    let color = theme.colors.surfaceVariant;
-                    if (isActive) color = theme.colors.primary;
-                    if (isCompleted) color = theme.colors.primary;
-
                     return (
                         <React.Fragment key={step.key}>
                             {/* Step Item */}
-                            <View style={styles.stepItem}>
-                                <View style={[styles.iconContainer, { backgroundColor: isCompleted || isActive ? theme.colors.secondaryContainer : theme.colors.surfaceVariant }]}>
-                                    <MaterialCommunityIcons
-                                        name={step.icon as any}
-                                        size={20}
-                                        color={isCompleted || isActive ? theme.colors.primary : theme.colors.onSurfaceVariant}
-                                    />
-                                </View>
-                                <Text
-                                    variant="labelSmall"
-                                    style={{
-                                        color: isActive ? theme.colors.primary : theme.colors.onSurfaceVariant,
-                                        fontWeight: isActive ? 'bold' : 'normal',
-                                        marginTop: 4
-                                    }}
-                                >
-                                    {step.label}
-                                </Text>
-                            </View>
+                            <StepItem
+                                step={step}
+                                isActive={isActive}
+                                isCompleted={isCompleted}
+                                theme={theme}
+                            />
 
                             {/* Connector Line */}
                             {index < steps.length - 1 && (
-                                <View style={[
-                                    styles.connector,
-                                    { backgroundColor: index < activeStep ? theme.colors.primary : theme.colors.surfaceVariant }
-                                ]} />
+                                <Connector
+                                    isActive={index < activeStep}
+                                    theme={theme}
+                                />
                             )}
                         </React.Fragment>
                     );
@@ -145,6 +128,71 @@ export const TransactionProgressBar = ({ status, verificationDeadline, style }: 
             )}
         </View>
     );
+};
+
+const StepItem = ({ step, isActive, isCompleted, theme }: { step: any, isActive: boolean, isCompleted: boolean, theme: any }) => {
+    const anim = React.useRef(new Animated.Value(isActive || isCompleted ? 1 : 0)).current;
+
+    React.useEffect(() => {
+        Animated.timing(anim, {
+            toValue: isActive || isCompleted ? 1 : 0,
+            duration: 300,
+            useNativeDriver: false,
+        }).start();
+    }, [isActive, isCompleted]);
+
+    const backgroundColor = anim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [theme.colors.surfaceVariant, theme.colors.secondaryContainer],
+    });
+
+    const scale = anim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [1, 1.05, 1.1],
+    });
+
+    return (
+        <View style={styles.stepItem}>
+            <Animated.View style={[styles.iconContainer, { backgroundColor }]}>
+                <MaterialCommunityIcons
+                    name={step.icon as any}
+                    size={20}
+                    color={isCompleted || isActive ? theme.colors.primary : theme.colors.onSurfaceVariant}
+                />
+            </Animated.View>
+            <Animated.View style={{ transform: [{ scale: isActive ? scale : 1 }] }}>
+                <Text
+                    variant="labelSmall"
+                    style={{
+                        color: isActive ? theme.colors.primary : theme.colors.onSurfaceVariant,
+                        fontWeight: isActive ? 'bold' : 'normal',
+                        marginTop: 4
+                    }}
+                >
+                    {step.label}
+                </Text>
+            </Animated.View>
+        </View>
+    );
+};
+
+const Connector = ({ isActive, theme }: { isActive: boolean, theme: any }) => {
+    const anim = React.useRef(new Animated.Value(isActive ? 1 : 0)).current;
+
+    React.useEffect(() => {
+        Animated.timing(anim, {
+            toValue: isActive ? 1 : 0,
+            duration: 300,
+            useNativeDriver: false,
+        }).start();
+    }, [isActive]);
+
+    const backgroundColor = anim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [theme.colors.surfaceVariant, theme.colors.primary],
+    });
+
+    return <Animated.View style={[styles.connector, { backgroundColor }]} />;
 };
 
 const styles = StyleSheet.create({
