@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/assets/images/digisecond-logo.png" alt="DigiSecond Logo" width="200">
+  <img src="src/assets/icons/logotrans.PNG" alt="DigiSecond Logo" width="200">
 </p>
 
 <h1 align="center">DigiSecond</h1>
