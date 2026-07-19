@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/assets/icons/logotrans.PNG" alt="DigiSecond Logo" width="200">
+  <img src="src/assets/icons/logotrans1.png" alt="DigiSecond Logo" width="200">
 </p>
 
 <h1 align="center">DigiSecond</h1>
@@ -11,13 +11,13 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js-14-000000?style=flat&logo=nextdotjs" alt="Next.js">
-  <img src="https://img.shields.io/badge/tRPC-11-2596BE?style=flat&logo=trpc" alt="tRPC">
-  <img src="https://img.shields.io/badge/Prisma-5-2D3748?style=flat&logo=prisma" alt="Prisma">
-  <img src="https://img.shields.io/badge/Tailwind-3-06B6D4?style=flat&logo=tailwindcss" alt="Tailwind">
-  <img src="https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?style=flat&logo=supabase" alt="Supabase">
-  <img src="https://img.shields.io/badge/Xendit- payments-167EE6?style=flat" alt="Xendit">
-  <img src="https://img.shields.io/badge/React_Native-Expo-000020?style=flat&logo=expo" alt="Expo">
+  <img src="https://img.shields.io/badge/Next.js-000000?style=flat&logo=nextdotjs" alt="Next.js">
+  <img src="https://img.shields.io/badge/tRPC-2596BE?style=flat" alt="tRPC">
+  <img src="https://img.shields.io/badge/Prisma-2D3748?style=flat&logo=prisma" alt="Prisma">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat&logo=tailwindcss" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase" alt="Supabase">
+  <img src="https://img.shields.io/badge/Xendit-167EE6?style=flat" alt="Xendit">
+  <img src="https://img.shields.io/badge/Expo-000020?style=flat&logo=expo" alt="Expo">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
 
