@@ -1,6 +1,7 @@
 # DigiSecond — Deployment Guide
 **Stack**: Ubuntu Server (VM) · Nginx · Cloudflare Tunnel · PostgreSQL (Supabase)  
 **Scope**: Lokal → Internet, tanpa VPS, tanpa domain, tanpa CI/CD  
+**Host OS**: Windows 10/11  
 **Last updated**: 2026-04-11
 
 ---
@@ -23,7 +24,7 @@ PostgreSQL (Supabase Cloud) + Redis (Upstash Cloud)
 
 ---
 
-## Bagian 1 — Persiapan VirtualBox
+## Bagian 1 — Persiapan VirtualBox (Windows)
 
 ### 1.1 Spesifikasi VM yang Disarankan
 
@@ -39,7 +40,9 @@ PostgreSQL (Supabase Cloud) + Redis (Upstash Cloud)
 Di VirtualBox → Settings → Network:
 
 - **Adapter 1**: NAT — akses internet dari VM (untuk download package, Cloudflare Tunnel)
-- **Adapter 2**: Host-only Adapter — SSH dari Manjaro ke VM
+- **Adapter 2**: Host-only Adapter — SSH dari Windows ke VM
+
+> **Catatan Windows**: Pastikan VirtualBox Host-Only Network sudah terbuat. Cek di **File → Host Network Manager** — harus ada entry `VirtualBox Host-Only Ethernet Adapter`. Kalau belum ada, klik **Create**.
 
 ### 1.3 Cari IP VM Setelah Boot
 
@@ -50,15 +53,36 @@ ip addr show
 # Contoh output: inet 192.168.56.101/24
 ```
 
-### 1.4 SSH dari Manjaro
+### 1.4 SSH dari Windows
 
-```bash
-# Di Manjaro
+Windows 10/11 sudah punya OpenSSH client built-in. Gunakan **PowerShell** atau **Windows Terminal** — tidak perlu install apa-apa.
+
+```powershell
+# Verifikasi OpenSSH tersedia (ada di Windows 10 v1809+)
+ssh -V
+
+# SSH ke VM
 ssh deploy@192.168.56.101
-
-# Agar tidak perlu password setiap kali
-ssh-copy-id deploy@192.168.56.101
 ```
+
+**Generate SSH key** (jika belum punya):
+
+```powershell
+ssh-keygen -t ed25519 -C "windows-host"
+# Tekan Enter untuk semua prompt (pakai path default)
+# Key tersimpan di C:\Users\NamaKamu\.ssh\
+```
+
+**Copy SSH key ke VM** (`ssh-copy-id` tidak tersedia di Windows, gunakan cara ini):
+
+```powershell
+# Di PowerShell — satu baris
+type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh deploy@192.168.56.101 "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+```
+
+Setelah ini, SSH ke VM tidak akan meminta password lagi.
+
+> **Alternatif**: Jika ingin memakai GUI, bisa gunakan **PuTTY** + **PuTTYgen**. Tapi PowerShell lebih praktis karena tidak perlu install tambahan.
 
 ---
 
@@ -327,7 +351,7 @@ sudo nginx -t
 # Reload
 sudo systemctl reload nginx
 
-# Verifikasi dari Manjaro
+# Verifikasi dari Windows (PowerShell)
 curl http://192.168.56.101   # harus dapat respons Next.js
 ```
 
@@ -360,7 +384,7 @@ cloudflared --version
 
 ```bash
 cloudflared tunnel login
-# Akan muncul URL — buka di browser Manjaro
+# Akan muncul URL — buka di browser Windows
 # Klik Authorize
 # File credentials tersimpan otomatis di ~/.cloudflared/cert.pem
 ```
@@ -565,7 +589,7 @@ curl http://localhost:3000
 curl http://localhost:80
 # Harus dapat respons yang sama
 
-# 4. Dari Manjaro (lokal)
+# 4. Dari Windows (PowerShell)
 curl http://192.168.56.101
 # Harus dapat respons Next.js
 
@@ -585,7 +609,7 @@ sudo ufw status
 # Harus: OpenSSH dan Nginx Full ALLOW
 
 # 8. Test dari internet
-# Buka URL tunnel di browser HP (matikan WiFi, pakai data) 
+# Buka URL tunnel di browser HP (matikan WiFi, pakai data)
 # https://[TUNNEL-ID].cfargotunnel.com
 ```
 
@@ -648,6 +672,20 @@ sudo nginx -T | grep -A 10 "realtime"
 # Tidak perlu konfigurasi tambahan di sisi tunnel
 ```
 
+### SSH tidak bisa masuk dari Windows
+
+```powershell
+# Pastikan VM menyala dan Adapter 2 (Host-only) aktif
+# Cek IP VM dari dalam VM
+ip addr show
+
+# Test ping dari PowerShell Windows
+ping 192.168.56.101
+
+# Jika tidak bisa ping, cek Host Network Manager di VirtualBox
+# File → Host Network Manager → pastikan adapter aktif dan DHCP enabled
+```
+
 ---
 
 ## Ringkasan Port & Service
@@ -658,7 +696,7 @@ sudo nginx -T | grep -A 10 "realtime"
 | Nginx | 80 | Ya (via tunnel) | Entry point semua request |
 | cloudflared | — | — | Tunnel ke Cloudflare |
 | PostgreSQL | 5432 | Tidak | Supabase Cloud |
-| SSH | 22 | Hanya dari LAN | Manjaro → VM |
+| SSH | 22 | Hanya dari LAN | Windows → VM |
 
 ---
 
